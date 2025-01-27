@@ -65,7 +65,7 @@ public class UserDto {
             this.username = user.getUsername();
             this.email = user.getEmail();
             this.phoneNumber = user.getPhoneNumber();
-            this.role = user.getRole().getValue();
+            this.role = String.valueOf(user.getRole());
             this.lastLoginDate = user.getLastLoginDate() != null ?
                     user.getLastLoginDate().toString() : null;
             this.lastLoginIp = user.getLastLoginIp();
@@ -85,7 +85,7 @@ public class UserDto {
             this.accessToken = accessToken;
             this.username = user.getUsername();
             this.email = user.getEmail();
-            this.role = user.getRole().getValue();
+            this.role = String.valueOf(user.getRole());
         }
     }
 }

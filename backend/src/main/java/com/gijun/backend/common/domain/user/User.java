@@ -52,7 +52,7 @@ public class User extends BaseEntity {
         this.password = password;
         this.email = email;
         this.phoneNumber = phoneNumber;
-        this.role = UserRole.USER;
+        this.role = UserRole.ROLE_USER;
     }
 
     public void updateLastLogin(String ip) {
