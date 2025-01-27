@@ -33,10 +33,7 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const navItems = [
-  { name: '재고 현황', path: '/sis/inventory/status' },
-  { name: '입/출고 관리', path: '/sis/inventory/movement' },
-  { name: '재고 관리', path: '/sis/inventory/list' },
-  { name: '재고 이력', path: '/sis/inventory/history' },
+  { name: '고객 목록', path: '/sis/customers/list' },
 ]
 
 const isCurrentRoute = (path) => route.path === path

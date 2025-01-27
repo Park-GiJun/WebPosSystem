@@ -60,13 +60,17 @@ const router = createRouter({
                     component: () => import('@/views/sis/employees/EmployeeLayout.vue'),
                     children: [
                         {
+                            path: '',
+                            redirect: 'list'
+                        },
+                        {
                             path: 'list',
-                            name: 'List',
+                            name: 'EmployeeList',
                             component: () => import('@/views/sis/employees/EmployeeListView.vue')
                         },
                         {
                             path: 'attendance',
-                            name: 'Attendance',
+                            name: 'EmployeeAttendance',
                             component: () => import('@/views/sis/employees/AttendanceView.vue')
                         }
                     ]
@@ -77,13 +81,17 @@ const router = createRouter({
                     component: () => import('@/views/sis/payments/PaymentLayout.vue'),
                     children: [
                         {
+                            path: '',
+                            redirect: 'history'
+                        },
+                        {
                             path: 'history',
-                            name: 'History',
+                            name: 'PaymentHistory',
                             component: () => import('@/views/sis/payments/PaymentHistoryView.vue')
                         },
                         {
                             path: 'stats',
-                            name: 'Stats',
+                            name: 'PaymentStats',
                             component: () => import('@/views/sis/payments/PaymentStatsView.vue')
                         }
                     ]
@@ -102,7 +110,37 @@ const router = createRouter({
                             path: 'movement',
                             name: 'Movement',
                             component: () => import('@/views/sis/inventory/InventoryMovementView.vue')
+                        },
+                        {
+                            path: 'list',
+                            name: 'List',
+                            component: () => import('@/views/sis/inventory/InventoryListView.vue')
+                        },
+                        {
+                            path :'history',
+                            name: 'History',
+                            component: () => import('@/views/sis/inventory/InventoryHistoryView.vue')
                         }
+                    ]
+                },
+                {
+                    path: 'customers',
+                    component: () => import('@/views/sis/customers/CustomerLayout.vue'),
+                    children: [
+                        {
+                            path: '',
+                            redirect: 'list'
+                        },
+                        {
+                            path: 'list',
+                            name: 'CustomerList',
+                            component: () => import('@/views/sis/customers/CustomerListView.vue')
+                        }
+                        // {
+                        //     path: 'points',
+                        //     name: 'CustomerPoints',
+                        //     component: () => import('@/views/sis/customers/CustomerPointsView.vue')
+                        // }
                     ]
                 },
                 {
