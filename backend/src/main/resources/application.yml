@@ -1,0 +1,84 @@
+# src/main/resources/application.yml
+server:
+  port: 9832
+  servlet:
+    context-path: /api
+
+spring:
+  profiles:
+    active: dev
+
+  datasource:
+    url: jdbc:mysql://oracle-db-test.cnaimoi0uiq8.ap-northeast-2.rds.amazonaws.com:3306/WebPosSystem
+    username: gijunpark
+    password: park9832
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: 15.164.142.172
+      port: 6379
+
+  kafka:
+    bootstrap-servers: 15.164.142.172:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: group-id
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  session:
+    store-type: redis
+    redis:
+      namespace: spring:session
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+jwt:
+  secret: gijunSecretKey1234567890gijunSecretKey1234567890gijunSecretKey1234567890
+  expiration: 86400000
+  header: Authorization
+  prefix: Bearer
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    com.gijun.backend: DEBUG
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+  packages-to-scan: com.gijun.backend
+
+---
+spring:
+  config:
+    activate:
+      on-profile: production
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
