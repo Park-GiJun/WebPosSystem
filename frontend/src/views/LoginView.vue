@@ -2,6 +2,9 @@
   <div class="min-h-screen bg-gray-100 flex items-center justify-center">
     <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
       <h2 class="text-2xl font-bold text-center mb-8">로그인</h2>
+      <div class="mb-4 text-sm text-gray-500 text-center">
+        테스트 계정: admin / admin
+      </div>
       <form @submit.prevent="handleLogin" class="space-y-6">
         <div>
           <label class="block text-sm font-medium text-gray-700">아이디</label>
