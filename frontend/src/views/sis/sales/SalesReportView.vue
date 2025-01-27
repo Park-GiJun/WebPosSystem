@@ -132,7 +132,7 @@
                       리포트 미리보기
                     </DialogTitle>
                     <button @click="previewModal = false" class="text-gray-400 hover:text-gray-500">
-                      <XMark class="h-6 w-6" />
+                      <file class="h-6 w-6" />
                     </button>
                   </div>
                   <div class="mt-4">
@@ -191,7 +191,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Download, Eye, Trash, XMark } from 'lucide-vue-next'
+import { Download, Eye, Trash, File } from 'lucide-vue-next'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import ReportChart from '@/components/ReportChart.vue'
 

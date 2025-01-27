@@ -15,6 +15,11 @@ const router = createRouter({
             component: () => import('@/views/SystemSelect.vue')
         },
         {
+            path: '/dating-event',
+            name: 'DatingEvent',
+            component: () => import('@/views/DatingEventPage.vue')
+        },
+        {
             path: '/sis',
             component: () => import('@/layouts/SisLayout.vue'),
             children: [
@@ -114,7 +119,7 @@ const router = createRouter({
         },
         {
             path: '/pos',
-            component: () => import('@/layouts/POSLayout.vue'),
+            component: () => import('@/layouts/PosLayout.vue'),
             children: [
                 {
                     path: '',

@@ -41,10 +41,10 @@ public class User extends BaseEntity {
     private String lastLoginIp;
 
     @Column(nullable = false)
-    private boolean enabled = true;
+    private Boolean enabled = true;
 
     @Column(name = "account_non_locked")
-    private boolean accountNonLocked = true;
+    private Boolean accountNonLocked = true;
 
     @Builder
     public User(String username, String password, String email, String phoneNumber) {

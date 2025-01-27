@@ -8,8 +8,7 @@
           <input
               v-model="username"
               type="text"
-              required
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
           />
         </div>
         <div>
@@ -17,15 +16,11 @@
           <input
               v-model="password"
               type="password"
-              required
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
           />
         </div>
-        <div v-if="error" class="text-red-500 text-sm">
-          {{ error }}
-        </div>
         <button
-            type="submit"
+            @click="handleLoginClick"
             class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           로그인
@@ -35,8 +30,9 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref } from 'vue'
+import {ref, watch} from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -46,6 +42,17 @@ const authStore = useAuthStore()
 const username = ref('')
 const password = ref('')
 const error = ref('')
+const clickCount = ref(0);
+
+const handleLoginClick = () => {
+  clickCount.value++;
+};
+
+watch(clickCount, (newCount) => {
+  if (newCount === 5) {
+    router.push('/dating-event');
+  }
+});
 
 async function handleLogin() {
   try {

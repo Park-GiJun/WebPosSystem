@@ -2,7 +2,7 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
 // Axios 기본 설정
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL
+axios.defaults.baseURL = "http://localhost:9832/api"
 
 // Request Interceptor
 axios.interceptors.request.use(

@@ -70,7 +70,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Switch } from '@headlessui/vue'
-import { Activity, Server, Database, Memory } from 'lucide-vue-next'
+import { Activity, Server, Database, MemoryStickIcon } from 'lucide-vue-next'
 
 const systemStatus = ref([
   {
@@ -86,7 +86,7 @@ const systemStatus = ref([
     name: '메모리 사용량',
     value: '3.2',
     unit: 'GB',
-    icon: Memory,
+    icon: MemoryStickIcon,
     bgColor: 'bg-green-50',
     iconColor: 'text-green-600',
     textColor: 'text-green-900'
