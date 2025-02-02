@@ -1,5 +1,6 @@
 package com.gijun.backend.common.domain.user;
 
+import com.gijun.backend.common.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
