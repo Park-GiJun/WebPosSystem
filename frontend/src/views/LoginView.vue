@@ -1,69 +1,153 @@
+<!-- LoginView.vue -->
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div class="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-      <h2 class="text-2xl font-bold text-center mb-8">로그인</h2>
-      <div class="mb-4 text-sm text-gray-500 text-center">
-        테스트 계정: admin / admin
+  <div class="min-h-screen bg-gray-100 flex flex-col">
+    <!-- 상단 버튼 영역 -->
+    <div class="absolute top-4 right-4 flex gap-4">
+      <button
+          @click="checkHealth"
+          class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg flex items-center gap-2"
+      >
+        <ActivitySquare class="w-4 h-4" />
+        서버 상태 확인
+      </button>
+
+      <router-link
+          to="/meeting"
+          class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+      >
+        미팅 페이지
+      </router-link>
+    </div>
+
+    <!-- 헬스체크 결과 표시 -->
+    <div v-if="healthStatus" class="absolute top-20 right-4 w-80">
+      <div
+          :class="[
+          'p-4 rounded-lg',
+          healthStatus.status === 'success'
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+        ]"
+      >
+        {{ healthStatus.message }}
       </div>
-      <form @submit.prevent="handleLogin" class="space-y-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">아이디</label>
-          <input
-              v-model="username"
-              type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
-          />
+    </div>
+
+    <!-- 로그인 폼 -->
+    <div class="flex-1 flex items-center justify-center">
+      <div class="bg-white p-8 rounded-xl shadow-lg w-96">
+        <h1 class="text-2xl font-bold mb-6 text-center">로그인</h1>
+
+        <!-- 에러 메시지 -->
+        <div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-800 rounded-lg">
+          {{ errorMessage }}
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">비밀번호</label>
-          <input
-              v-model="password"
-              type="password"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2"
-          />
-        </div>
-        <button
-            @click="handleLoginClick"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          로그인
-        </button>
-      </form>
+
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              아이디
+            </label>
+            <input
+                type="text"
+                v-model="form.username"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              비밀번호
+            </label>
+            <input
+                type="password"
+                v-model="form.password"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+            />
+          </div>
+
+          <button
+              type="submit"
+              class="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              :disabled="isLoading"
+          >
+            {{ isLoading ? '로그인 중...' : '로그인' }}
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import {ref, watch} from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted } from 'vue'
+import { ActivitySquare } from 'lucide-vue-next'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import axios from '@/plugins/axios'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+const healthStatus = ref(null)
+const errorMessage = ref('')
+const isLoading = ref(false)
 
-const username = ref('')
-const password = ref('')
-const error = ref('')
-const clickCount = ref(0);
+const form = reactive({
+  username: '',
+  password: ''
+})
 
-const handleLoginClick = () => {
-  clickCount.value++;
-};
-
-watch(clickCount, (newCount) => {
-  if (newCount === 5) {
-    router.push('/dating-event');
+// URL query parameter에서 에러 메시지 확인
+onMounted(() => {
+  if (route.query.error) {
+    errorMessage.value = route.query.error
+    // 에러 메시지를 표시한 후 URL에서 제거
+    router.replace({ query: {} })
   }
-});
+})
 
-async function handleLogin() {
+const checkHealth = async () => {
   try {
-    error.value = ''
-    await authStore.login(username.value, password.value)
+    const response = await axios.get('/health')
+
+    if (response.status === 200) {
+      healthStatus.value = {
+        status: 'success',
+        message: '백엔드 서버가 정상적으로 동작중입니다.'
+      }
+    } else {
+      healthStatus.value = {
+        status: 'error',
+        message: '백엔드 서버 연결에 실패했습니다.'
+      }
+    }
+  } catch (error) {
+    healthStatus.value = {
+      status: 'error',
+      message: '백엔드 서버에 연결할 수 없습니다.'
+    }
+  }
+
+  setTimeout(() => {
+    healthStatus.value = null
+  }, 3000)
+}
+
+const handleSubmit = async () => {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+
+    await authStore.login(form.username, form.password)
     await router.push('/system')
-  } catch (err) {
-    error.value = err.response?.data?.message || '로그인에 실패했습니다.'
+  } catch (error) {
+    console.error('Login failed:', error)
+    errorMessage.value = error.response?.data?.message || '로그인에 실패했습니다.'
+  } finally {
+    isLoading.value = false
   }
 }
 </script>

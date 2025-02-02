@@ -25,7 +25,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const storeName = ref('카페 길준')
+const storeName = ref('카페')
 const currentDate = ref(new Date().toLocaleDateString())
 
 const logout = () => {

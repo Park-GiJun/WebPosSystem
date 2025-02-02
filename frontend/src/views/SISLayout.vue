@@ -48,6 +48,7 @@ import {
   UsersIcon,
   CogIcon
 } from '@heroicons/vue/24/outline'
+import axios from '@/plugins/axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -70,9 +71,9 @@ function isCurrentRoute(path) {
 
 async function handleLogout() {
   try {
-    await axios.post('/api/auth/logout')
+    await axios.post('/auth/logout')
     authStore.logout()
-    router.push('/login')
+    await router.push('/login')
   } catch (error) {
     console.error('로그아웃 실패:', error)
   }

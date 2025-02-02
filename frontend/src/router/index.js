@@ -1,5 +1,5 @@
 // router/index.js
-import { createRouter, createWebHistory } from 'vue-router'
+import {createRouter, createWebHistory} from 'vue-router'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -117,7 +117,7 @@ const router = createRouter({
                             component: () => import('@/views/sis/inventory/InventoryListView.vue')
                         },
                         {
-                            path :'history',
+                            path: 'history',
                             name: 'History',
                             component: () => import('@/views/sis/inventory/InventoryHistoryView.vue')
                         }
@@ -175,7 +175,35 @@ const router = createRouter({
                 //     component: () => import('@/views/pos/SettingsView.vue')
                 // }
             ]
-
+        },
+        {
+            path: '/error/401',
+            name: 'Unauthorized',
+            component: () => import('@/views/errors/401.vue')
+        },
+        {
+            path: '/error/403',
+            name: 'Forbidden',
+            component: () => import('@/views/errors/403.vue')
+        },
+        {
+            path: '/error/404',
+            name: 'NotFound',
+            component: () => import('@/views/errors/404.vue')
+        },
+        {
+            path: '/error/500',
+            name: 'ServerError',
+            component: () => import('@/views/errors/500.vue')
+        },
+        // catch all 404
+        {
+            path: '/:pathMatch(.*)*',
+            redirect: '/error/404'
+        },
+        {
+            path: '/meeting',
+            component: () => import('@/views/DatingEventPage.vue')
         }
     ]
 })

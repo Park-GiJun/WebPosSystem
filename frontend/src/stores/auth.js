@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import axios from '@/plugins/axios.js'
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async login(username, password) {
             try {
-                const response = await axios.post('/api/auth/login', { username, password })
+                const response = await axios.post('/auth/login', { username, password })
                 const { token } = response.data.data
 
                 this.token = token
@@ -31,7 +31,7 @@ export const useAuthStore = defineStore('auth', {
 
         async validateSession() {
             try {
-                const response = await axios.get('/api/user/me')
+                const response = await axios.get('/user/me')
                 this.user = response.data.data
                 this.isAuthenticated = true
                 return true
@@ -43,7 +43,7 @@ export const useAuthStore = defineStore('auth', {
 
         async fetchUserInfo() {
             try {
-                const response = await axios.get('/api/user/me')
+                const response = await axios.get('/user/me')
                 this.user = response.data.data
             } catch (error) {
                 throw error
