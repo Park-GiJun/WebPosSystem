@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+// Product.java
 @Entity
 @Table(name = "products")
 @Getter
@@ -20,62 +21,47 @@ public class Product extends BaseEntity {
     private Long id;
 
     @Column(nullable = false, unique = true, length = 20)
-    private String code;  // 상품 코드
+    private String code;
 
     @Column(nullable = false, length = 100)
-    private String name;  // 상품명
+    private String name;
 
     @Column(nullable = false, length = 500)
-    private String description;  // 상품 설명
-
-    @Column(length = 255)
-    private String imageUrl;  // 상품 이미지 URL
+    private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
-    private Category category;  // 카테고리
-
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal price;  // 판매가
-
-    @Column(name = "cost_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal costPrice;  // 원가
+    private Category category;
 
     @Column(nullable = false)
-    private Integer stock;  // 현재 재고량
+    private BigDecimal price;
+
+    @Column(name = "cost_price", nullable = false)
+    private BigDecimal costPrice;
+
+    @Column(nullable = false)
+    private Integer stock;
 
     @Column(name = "min_stock", nullable = false)
-    private Integer minStock;  // 최소 재고량
+    private Integer minStock;
 
     @Column(name = "max_stock")
-    private Integer maxStock;  // 최대 재고량
+    private Integer maxStock;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductStatus status;  // 상품 상태
-
-    @Column(name = "barcode", length = 30)
-    private String barcode;  // 바코드
-
-    @Column(name = "is_taxable", nullable = false)
-    private boolean isTaxable;  // 과세 여부
-
-    @Column(name = "tax_rate", precision = 5, scale = 2)
-    private BigDecimal taxRate;  // 세율
-
-    @Column(name = "point_rate", precision = 5, scale = 2)
-    private BigDecimal pointRate;  // 포인트 적립률
+    private ProductStatus status;
 
     @Column(name = "sale_start_date")
-    private LocalDateTime saleStartDate;  // 판매 시작일
+    private LocalDateTime saleStartDate;
 
     @Column(name = "sale_end_date")
-    private LocalDateTime saleEndDate;  // 판매 종료일
+    private LocalDateTime saleEndDate;
 
     @Builder
     public Product(String code, String name, String description, Category category,
                    BigDecimal price, BigDecimal costPrice, Integer stock, Integer minStock,
-                   Integer maxStock, ProductStatus status, boolean isTaxable) {
+                   Integer maxStock, ProductStatus status) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -86,66 +72,45 @@ public class Product extends BaseEntity {
         this.minStock = minStock;
         this.maxStock = maxStock;
         this.status = status;
-        this.isTaxable = isTaxable;
-        this.taxRate = isTaxable ? new BigDecimal("0.10") : BigDecimal.ZERO;  // 기본 세율 10%
-        this.pointRate = new BigDecimal("0.01");  // 기본 포인트 적립률 1%
     }
-
-    // 재고 관리 메서드
-    public void addStock(int quantity) {
+    public void updateStock(int quantity) {
         this.stock += quantity;
-    }
-
-    public void removeStock(int quantity) {
-        int restStock = this.stock - quantity;
-        if (restStock < 0) {
-            throw new IllegalStateException("재고가 부족합니다.");
+        if (this.stock < 0) {
+            throw new IllegalStateException("재고가 부족합니다");
         }
-        this.stock = restStock;
+        if (this.stock == 0) {
+            this.status = ProductStatus.OUT_OF_STOCK;
+        }
+        if (this.stock > 0 && this.status == ProductStatus.OUT_OF_STOCK) {
+            this.status = ProductStatus.ON_SALE;
+        }
     }
 
-    // 상품 상태 변경
-    public void updateStatus(ProductStatus status) {
+    public void update(String name, String description, Category category,
+                       BigDecimal price, BigDecimal costPrice, Integer minStock, Integer maxStock) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+        if (category != null) this.category = category;
+        if (price != null) this.price = price;
+        if (costPrice != null) this.costPrice = costPrice;
+        if (minStock != null) this.minStock = minStock;
+        if (maxStock != null) this.maxStock = maxStock;
+    }
+
+    public void changeStatus(ProductStatus status) {
         this.status = status;
     }
-
-    // 가격 변경
-    public void updatePrice(BigDecimal newPrice) {
-        this.price = newPrice;
-    }
-
-    // 상품 정보 업데이트
-    public void updateInfo(String name, String description, Category category,
-                           BigDecimal price, BigDecimal costPrice,
-                           Integer minStock, Integer maxStock) {
-        this.name = name;
-        this.description = description;
-        this.category = category;
-        this.price = price;
-        this.costPrice = costPrice;
-        this.minStock = minStock;
-        this.maxStock = maxStock;
-    }
-
-    // 판매 기간 설정
-    public void setSalePeriod(LocalDateTime startDate, LocalDateTime endDate) {
-        if (endDate != null && startDate != null && endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("종료일이 시작일보다 빠를 수 없습니다.");
-        }
-        this.saleStartDate = startDate;
-        this.saleEndDate = endDate;
-    }
-
-    // 판매 가능 여부 확인
     public boolean isAvailable() {
         if (status != ProductStatus.ON_SALE) {
             return false;
         }
 
         LocalDateTime now = LocalDateTime.now();
+
         if (saleStartDate != null && now.isBefore(saleStartDate)) {
             return false;
         }
+
         if (saleEndDate != null && now.isAfter(saleEndDate)) {
             return false;
         }
@@ -153,4 +118,3 @@ public class Product extends BaseEntity {
         return stock > 0;
     }
 }
-

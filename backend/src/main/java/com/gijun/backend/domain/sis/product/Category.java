@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "categories")
@@ -19,45 +19,67 @@ public class Category extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String name;  // 카테고리 이름
+    @Column(nullable = false, unique = true, length = 20)
+    private String code;
 
-    @Column(length = 500)
-    private String description;  // 카테고리 설명
+    @Column(nullable = false, length = 50)
+    private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    private Category parentCategory;  // 상위 카테고리
+    private Category parent;
 
-    @OneToMany(mappedBy = "parentCategory", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Category> subCategories = new HashSet<>();  // 하위 카테고리 목록
+    @OneToMany(mappedBy = "parent")
+    private List<Category> children = new ArrayList<>();
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Product> products = new HashSet<>();  // 해당 카테고리에 속한 제품 목록
+    @Column(nullable = false)
+    private Integer level;
+
+    @Column(name = "order_num", nullable = false)
+    private Integer orderNum;
+
+    @Column(length = 500)
+    private String description;
+
+    @OneToMany(mappedBy = "category")
+    private List<Product> products = new ArrayList<>();
 
     @Builder
-    public Category(String name, String description, Category parentCategory) {
+    public Category(String code, String name, Category parent, Integer orderNum, String description) {
+        this.code = code;
         this.name = name;
+        this.parent = parent;
+        this.level = (parent == null) ? 1 : parent.getLevel() + 1;
+        this.orderNum = orderNum;
         this.description = description;
-        this.parentCategory = parentCategory;
+    }
+    public void updateInfo(String name, Category parent, Integer orderNum, String description) {
+        if (name != null) this.name = name;
+        if (parent != null && !parent.equals(this.parent)) {
+            validateParent(parent);
+            this.parent = parent;
+            this.level = parent.getLevel() + 1;
+        }
+        if (orderNum != null) this.orderNum = orderNum;
+        if (description != null) this.description = description;
     }
 
-    // 카테고리 정보 업데이트
-    public void updateInfo(String name, String description, Category parentCategory) {
-        this.name = name;
-        this.description = description;
-        this.parentCategory = parentCategory;
+    private void validateParent(Category newParent) {
+        if (this.equals(newParent)) {
+            throw new IllegalArgumentException("자기 자신을 부모로 설정할 수 없습니다");
+        }
+        if (this.hasChildren() && newParent.isDescendantOf(this)) {
+            throw new IllegalArgumentException("하위 카테고리를 상위 카테고리로 설정할 수 없습니다");
+        }
     }
 
-    // 하위 카테고리 추가
-    public void addSubCategory(Category subCategory) {
-        subCategory.parentCategory = this;
-        this.subCategories.add(subCategory);
+    public boolean hasChildren() {
+        return !children.isEmpty();
     }
 
-    // 하위 카테고리 제거
-    public void removeSubCategory(Category subCategory) {
-        this.subCategories.remove(subCategory);
-        subCategory.parentCategory = null;
+    public boolean isDescendantOf(Category ancestor) {
+        if (this.parent == null) return false;
+        if (this.parent.equals(ancestor)) return true;
+        return this.parent.isDescendantOf(ancestor);
     }
 }
