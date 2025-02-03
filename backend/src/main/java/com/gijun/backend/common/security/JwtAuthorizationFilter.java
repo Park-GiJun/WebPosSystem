@@ -1,8 +1,8 @@
 package com.gijun.backend.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gijun.backend.common.dto.CommonResponseDto;
-import com.gijun.backend.common.dto.ErrorCode;
+import com.gijun.backend.dto.CommonResponseDto;
+import com.gijun.backend.dto.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -2,7 +2,7 @@
 server:
   port: 9832
   servlet:
-    context-path: /api
+    context-path: /
 
 spring:
   profiles:

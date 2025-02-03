@@ -1,7 +1,7 @@
 package com.gijun.backend.common.security;
 
-import com.gijun.backend.common.domain.user.User;
-import com.gijun.backend.common.repository.user.UserRepository;
+import com.gijun.backend.domain.user.User;
+import com.gijun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
