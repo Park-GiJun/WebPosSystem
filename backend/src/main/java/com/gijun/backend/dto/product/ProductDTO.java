@@ -45,6 +45,8 @@ public class ProductDTO {
         @Min(0)
         private Integer stock;
 
+        private boolean isTaxable = true;  // default value
+
         @NotNull(message = "최소재고는 필수입니다")
         @Min(0)
         private Integer minStock;

@@ -52,6 +52,9 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private ProductStatus status;
 
+    @Column(name = "is_taxable", nullable = false)
+    private boolean isTaxable = true;  // default value
+
     @Column(name = "sale_start_date")
     private LocalDateTime saleStartDate;
 
@@ -61,7 +64,7 @@ public class Product extends BaseEntity {
     @Builder
     public Product(String code, String name, String description, Category category,
                    BigDecimal price, BigDecimal costPrice, Integer stock, Integer minStock,
-                   Integer maxStock, ProductStatus status) {
+                   Integer maxStock, ProductStatus status, boolean isTaxable) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -72,6 +75,7 @@ public class Product extends BaseEntity {
         this.minStock = minStock;
         this.maxStock = maxStock;
         this.status = status;
+        this.isTaxable = isTaxable;
     }
     public void updateStock(int quantity) {
         this.stock += quantity;
