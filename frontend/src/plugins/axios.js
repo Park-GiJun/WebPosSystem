@@ -48,6 +48,7 @@ instance.interceptors.request.use(
 )
 
 // Response Interceptor
+// :TODO Request시에 먼저 토큰 만료인지 체크하고 만료되면 localStorage 지우면서 로그인페이지로 팅기도록
 instance.interceptors.response.use(
     (response) => {
         const newToken = response.headers['new-token']
