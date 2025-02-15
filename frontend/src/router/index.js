@@ -120,6 +120,16 @@ const router = createRouter({
                             path: 'history',
                             name: 'History',
                             component: () => import('@/views/sis/inventory/InventoryHistoryView.vue')
+                        },
+                        {
+                            path: 'productCategory',
+                            name: 'ProductCategory',
+                            component: () => import('@/views/sis/category/CategoryManagementView.vue')
+                        },
+                        {
+                            path: 'productManagement',
+                            name: 'ProductManagement',
+                            components: () => import('@/views/sis/product/ProductManagementView.vue')
                         }
                     ]
                 },

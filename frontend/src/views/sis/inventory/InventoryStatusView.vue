@@ -1,147 +1,297 @@
-<!-- InventoryStatusView.vue -->
+// views/sis/inventory/InventoryStatusView.vue
 <template>
-  <div class="p-6 space-y-6">
-    <!-- 필터 -->
-    <div class="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-      <input
-          type="text"
-          v-model="search"
-          placeholder="상품명 또는 코드 검색"
-          class="w-64 rounded-md border-gray-300"
-      >
-      <select v-model="filters.category" class="rounded-md border-gray-300">
-        <option value="">전체 카테고리</option>
-        <option v-for="category in categories" :key="category">{{ category }}</option>
-      </select>
-      <select v-model="filters.location" class="rounded-md border-gray-300">
-        <option value="">전체 위치</option>
-        <option v-for="location in locations" :key="location">{{ location }}</option>
-      </select>
-      <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-        검색
-      </button>
-    </div>
+  <div class="p-6">
+    <h2 class="text-2xl font-bold mb-6">재고 현황</h2>
 
-    <!-- 재고 현황 요약 -->
-    <div class="grid grid-cols-4 gap-4">
-      <div class="bg-white p-4 rounded-lg shadow">
-        <h4 class="text-sm text-gray-500">총 재고 수량</h4>
-        <p class="mt-2 text-2xl font-bold">{{ totalStock }}개</p>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow">
-        <h4 class="text-sm text-gray-500">총 재고 금액</h4>
-        <p class="mt-2 text-2xl font-bold">{{ formatNumber(totalValue) }}원</p>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow">
-        <h4 class="text-sm text-gray-500">안전재고 미달</h4>
-        <p class="mt-2 text-2xl font-bold text-red-600">{{ lowStock }}개</p>
-      </div>
-      <div class="bg-white p-4 rounded-lg shadow">
-        <h4 class="text-sm text-gray-500">과다재고</h4>
-        <p class="mt-2 text-2xl font-bold text-yellow-600">{{ excessStock }}개</p>
+    <!-- 검색 필터 -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <BaseSelect
+            v-model="filters.categoryId"
+            :options="categoryOptions"
+            label="카테고리"
+            placeholder="전체"
+        />
+
+        <BaseSelect
+            v-model="filters.stockStatus"
+            :options="stockStatusOptions"
+            label="재고 상태"
+            placeholder="전체"
+        />
+
+        <BaseInput
+            v-model="filters.keyword"
+            label="검색어"
+            placeholder="상품명 또는 코드"
+        />
+
+        <div class="flex items-end">
+          <BaseButton
+              class="w-full"
+              @click="fetchInventoryStatus"
+          >
+            검색
+          </BaseButton>
+        </div>
       </div>
     </div>
 
-    <!-- 재고 목록 -->
+    <!-- 재고 현황 테이블 -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead>
-        <tr>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">상품코드</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">상품명</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">카테고리</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">현재고</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">적정재고</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">단가</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">재고금액</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-        </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-        <tr v-for="item in inventory" :key="item.id">
-          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.code }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.name }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.category }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.stock }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.optimal }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatNumber(item.price) }}원</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatNumber(item.value) }}원</td>
-          <td class="px-6 py-4 whitespace-nowrap">
-             <span :class="getStatusClass(item.status)" class="px-2 py-1 text-xs rounded-full">
-               {{ item.status }}
-             </span>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+      <div class="p-4 border-b">
+        <div class="flex justify-between items-center">
+          <div class="flex gap-4">
+            <span>총 상품: {{ totalProducts }}개</span>
+            <span>|</span>
+            <span>총 재고: {{ totalStock }}개</span>
+          </div>
+          <BaseButton @click="exportToExcel">
+            엑셀 다운로드
+          </BaseButton>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">상품코드</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">카테고리</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">상품명</th>
+            <th class="px-6 py-3 text-right text-sm font-medium text-gray-500">현재고</th>
+            <th class="px-6 py-3 text-right text-sm font-medium text-gray-500">최소재고</th>
+            <th class="px-6 py-3 text-right text-sm font-medium text-gray-500">최대재고</th>
+            <th class="px-6 py-3 text-center text-sm font-medium text-gray-500">상태</th>
+            <th class="px-6 py-3 text-center text-sm font-medium text-gray-500">관리</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+          <tr v-for="item in inventoryItems" :key="item.id">
+            <td class="px-6 py-4">{{ item.productCode }}</td>
+            <td class="px-6 py-4">{{ item.categoryName }}</td>
+            <td class="px-6 py-4">{{ item.productName }}</td>
+            <td class="px-6 py-4 text-right">{{ item.currentStock }}</td>
+            <td class="px-6 py-4 text-right">{{ item.minStock }}</td>
+            <td class="px-6 py-4 text-right">{{ item.maxStock }}</td>
+            <td class="px-6 py-4">
+              <StockStatusBadge :status="item.stockStatus" />
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-center gap-2">
+                <BaseButton
+                    variant="secondary"
+                    @click="showStockAdjustModal(item)"
+                >
+                  조정
+                </BaseButton>
+                <BaseButton
+                    variant="secondary"
+                    @click="showStockHistoryModal(item)"
+                >
+                  이력
+                </BaseButton>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <BasePagination
+          v-model:page="currentPage"
+          :total-pages="totalPages"
+          :total-elements="totalElements"
+      />
     </div>
+
+    <!-- 재고 조정 모달 -->
+    <BaseModal
+        v-model="showAdjustModal"
+        title="재고 조정"
+    >
+      <form @submit.prevent="handleStockAdjust" class="space-y-4">
+        <div class="bg-gray-50 p-4 rounded-lg mb-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-sm text-gray-500">상품코드</div>
+              <div class="font-medium">{{ selectedItem?.productCode }}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">상품명</div>
+              <div class="font-medium">{{ selectedItem?.productName }}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">현재 재고</div>
+              <div class="font-medium">{{ selectedItem?.currentStock }}개</div>
+            </div>
+          </div>
+        </div>
+
+        <BaseInput
+            v-model="adjustForm.quantity"
+            type="number"
+            label="조정 수량"
+            required
+        />
+
+        <BaseTextarea
+            v-model="adjustForm.reason"
+            label="조정 사유"
+            required
+        />
+
+        <div class="flex justify-end gap-2">
+          <BaseButton
+              type="button"
+              variant="secondary"
+              @click="showAdjustModal = false"
+          >
+            취소
+          </BaseButton>
+          <BaseButton
+              type="submit"
+              :disabled="isSubmitting"
+          >
+            저장
+          </BaseButton>
+        </div>
+      </form>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useToast } from 'vue-toastification'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseTextarea from '@/components/base/BaseTextarea.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BasePagination from '@/components/base/BasePagination.vue'
+import StockStatusBadge from '@/components/inventory/StockStatusBadge.vue'
+import axios from '@/plugins/axios'
 
-const search = ref('')
+const toast = useToast()
+
+// State
 const filters = ref({
-  category: '',
-  location: ''
+  categoryId: '',
+  stockStatus: '',
+  keyword: ''
+})
+const currentPage = ref(1)
+const inventoryItems = ref([])
+const totalElements = ref(0)
+const totalPages = ref(0)
+const totalProducts = ref(0)
+const totalStock = ref(0)
+const showAdjustModal = ref(false)
+const selectedItem = ref(null)
+const isSubmitting = ref(false)
+
+const adjustForm = ref({
+  quantity: 0,
+  reason: ''
 })
 
-const categories = ['원두', '시럽', '베이커리', '머그컵']
-const locations = ['본사 창고', '강남점 창고', '홍대점 창고']
+// Options
+const categoryOptions = ref([])
+const stockStatusOptions = [
+  { value: 'NORMAL', label: '정상' },
+  { value: 'LOW', label: '부족' },
+  { value: 'OUT_OF_STOCK', label: '품절' },
+  { value: 'EXCESS', label: '과다' }
+]
 
-// 재고 현황 요약
-const totalStock = ref(2580)
-const totalValue = ref(45680000)
-const lowStock = ref(12)
-const excessStock = ref(8)
-
-// 재고 목록
-const inventory = ref([
-  {
-    id: 1,
-    code: 'P001',
-    name: '에티오피아 예가체프',
-    category: '원두',
-    stock: 250,
-    optimal: 200,
-    price: 25000,
-    value: 6250000,
-    status: '정상'
-  },
-  {
-    id: 2,
-    code: 'P002',
-    name: '바닐라 시럽',
-    category: '시럽',
-    stock: 50,
-    optimal: 100,
-    price: 12000,
-    value: 600000,
-    status: '부족'
-  },
-  {
-    id: 3,
-    code: 'P003',
-    name: '크로와상',
-    category: '베이커리',
-    stock: 180,
-    optimal: 120,
-    price: 2500,
-    value: 450000,
-    status: '과다'
+// Methods
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('/api/categories')
+    categoryOptions.value = response.data.data.map(cat => ({
+      value: cat.id,
+      label: cat.name
+    }))
+  } catch (error) {
+    toast.error('카테고리 목록을 불러오는데 실패했습니다.')
   }
-])
-
-const formatNumber = (value) => {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-const getStatusClass = (status) => {
-  return {
-    '정상': 'bg-green-100 text-green-800',
-    '부족': 'bg-red-100 text-red-800',
-    '과다': 'bg-yellow-100 text-yellow-800'
-  }[status]
+const fetchInventoryStatus = async () => {
+  try {
+    const params = {
+      page: currentPage.value - 1,
+      size: 10,
+      ...filters.value
+    }
+
+    const response = await axios.get('/api/inventory/status', { params })
+    const data = response.data.data
+
+    inventoryItems.value = data.content
+    totalElements.value = data.totalElements
+    totalPages.value = data.totalPages
+    totalProducts.value = data.totalProducts
+    totalStock.value = data.totalStock
+  } catch (error) {
+    toast.error('재고 현황을 불러오는데 실패했습니다.')
+  }
 }
+
+const showStockAdjustModal = (item) => {
+  selectedItem.value = item
+  showAdjustModal.value = true
+  adjustForm.value = {
+    quantity: 0,
+    reason: ''
+  }
+}
+
+const handleStockAdjust = async () => {
+  try {
+    isSubmitting.value = true
+
+    await axios.post(`/api/inventory/${selectedItem.value.id}/adjust`, {
+      quantity: Number(adjustForm.value.quantity),
+      reason: adjustForm.value.reason
+    })
+
+    toast.success('재고가 조정되었습니다.')
+    showAdjustModal.value = false
+    fetchInventoryStatus()
+  } catch (error) {
+    toast.error('재고 조정에 실패했습니다.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const exportToExcel = async () => {
+  try {
+    const response = await axios.get('/api/inventory/status/export', {
+      params: filters.value,
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', '재고현황.xlsx')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    toast.error('엑셀 다운로드에 실패했습니다.')
+  }
+}
+
+// Watch
+watch(currentPage, () => {
+  fetchInventoryStatus()
+})
+
+// Initial fetch
+fetchCategories()
+fetchInventoryStatus()
 </script>

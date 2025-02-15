@@ -12,6 +12,18 @@
         </encoder>
     </appender>
 
+    <!-- CORS Logs -->
+    <appender name="CORSFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/cors.log</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/cors-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
     <!-- Domain-specific File Appenders -->
     <!-- Security Logs -->
     <appender name="SecurityFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -77,6 +89,12 @@
     </appender>
 
     <!-- Async Appenders -->
+    <appender name="AsyncCORS" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CORSFile"/>
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+    </appender>
+
     <appender name="AsyncSecurity" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="SecurityFile"/>
         <queueSize>512</queueSize>
@@ -106,6 +124,16 @@
         <queueSize>512</queueSize>
         <discardingThreshold>0</discardingThreshold>
     </appender>
+
+    <!-- CORS 관련 로거 설정 -->
+    <logger name="org.springframework.web.filter.CorsFilter" level="DEBUG" additivity="false">
+        <appender-ref ref="AsyncCORS"/>
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="org.springframework.web.cors" level="DEBUG" additivity="false">
+        <appender-ref ref="AsyncCORS"/>
+        <appender-ref ref="Console"/>
+    </logger>
 
     <!-- 환경별 로깅 설정 -->
     <springProfile name="local">
@@ -181,6 +209,16 @@
         <root level="WARN">
             <appender-ref ref="Console"/>
         </root>
+
+        <!-- CORS 로깅 설정 (DEBUG 레벨) -->
+        <logger name="org.springframework.web.filter.CorsFilter" level="DEBUG" additivity="false">
+            <appender-ref ref="AsyncCORS"/>
+            <appender-ref ref="Console"/>
+        </logger>
+        <logger name="org.springframework.web.cors" level="DEBUG" additivity="false">
+            <appender-ref ref="AsyncCORS"/>
+            <appender-ref ref="Console"/>
+        </logger>
 
         <!-- Security 관련 로깅 -->
         <logger name="com.gijun.backend.common.security" level="INFO" additivity="false">

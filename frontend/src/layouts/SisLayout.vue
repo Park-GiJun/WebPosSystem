@@ -132,7 +132,9 @@ const menuItems = [
       { name: '재고 현황', path: '/sis/inventory/status' },
       { name: '입/출고 관리', path: '/sis/inventory/movement' },
       { name: '재고 관리', path: '/sis/inventory/list' },
-      { name: '재고 이력', path: '/sis/inventory/history' }
+      { name: '재고 이력', path: '/sis/inventory/history' },
+      { name: '카테고리 관리', path: '/sis/inventory/productCategory'},
+      { name: '카테고리 관리', path: '/sis/inventory/productManagement'},
     ]
   },
   {

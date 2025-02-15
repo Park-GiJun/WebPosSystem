@@ -1,152 +1,256 @@
-<!-- InventoryMovementView.vue -->
+// views/sis/inventory/InventoryMovementView.vue
 <template>
   <div class="p-6 space-y-6">
-    <!-- 입출고 등록 버튼 -->
-    <div class="flex justify-end space-x-4">
-      <button @click="openInbound" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-        입고 등록
-      </button>
-      <button @click="openOutbound" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-        출고 등록
-      </button>
+    <!-- 헤더 -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">입/출고 관리</h2>
+      <div class="flex gap-2">
+        <BaseButton @click="showStockInModal = true">
+          입고 등록
+        </BaseButton>
+        <BaseButton @click="showStockOutModal = true">
+          출고 등록
+        </BaseButton>
+      </div>
     </div>
 
-    <!-- 필터 -->
-    <div class="bg-white p-4 rounded-lg shadow">
-      <div class="grid grid-cols-5 gap-4">
-        <div>
-          <label class="text-sm font-medium text-gray-700">기간</label>
-          <div class="mt-1 flex items-center gap-2">
-            <input type="date" v-model="filters.startDate" class="rounded-md border-gray-300">
-            <span>~</span>
-            <input type="date" v-model="filters.endDate" class="rounded-md border-gray-300">
+    <!-- 검색 필터 -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">기간</label>
+          <div class="flex gap-2">
+            <BaseInput
+                type="date"
+                v-model="filters.startDate"
+                class="flex-1"
+            />
+            <span class="flex items-center">~</span>
+            <BaseInput
+                type="date"
+                v-model="filters.endDate"
+                class="flex-1"
+            />
           </div>
         </div>
-        <div>
-          <label class="text-sm font-medium text-gray-700">유형</label>
-          <select v-model="filters.type" class="mt-1 w-full rounded-md border-gray-300">
-            <option value="">전체</option>
-            <option value="inbound">입고</option>
-            <option value="outbound">출고</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-sm font-medium text-gray-700">상품</label>
-          <input
-              type="text"
-              v-model="filters.product"
-              placeholder="상품명 검색"
-              class="mt-1 w-full rounded-md border-gray-300"
-          >
-        </div>
-        <div>
-          <label class="text-sm font-medium text-gray-700">창고</label>
-          <select v-model="filters.location" class="mt-1 w-full rounded-md border-gray-300">
-            <option value="">전체 창고</option>
-            <option v-for="location in locations" :key="location">{{ location }}</option>
-          </select>
-        </div>
+
+        <BaseSelect
+            v-model="filters.type"
+            :options="movementTypeOptions"
+            label="유형"
+            placeholder="전체"
+        />
+
         <div class="flex items-end">
-          <button @click="search" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+          <BaseButton
+              class="w-full"
+              @click="fetchMovements"
+          >
             검색
-          </button>
+          </BaseButton>
         </div>
       </div>
     </div>
 
-    <!-- 입출고 내역 -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead>
-        <tr>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">일시</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">상품명</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">수량</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">창고</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">담당자</th>
-          <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">비고</th>
-        </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-        <tr v-for="movement in movements" :key="movement.id">
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ movement.datetime }}</td>
-          <td class="px-6 py-4 whitespace-nowrap">
-              <span :class="getTypeClass(movement.type)" class="px-2 py-1 text-xs rounded-full">
-                {{ movement.type === 'inbound' ? '입고' : '출고' }}
-              </span>
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ movement.product }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ movement.quantity }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ movement.location }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ movement.manager }}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ movement.note }}</td>
-        </tr>
-        </tbody>
-      </table>
+    <!-- 요약 정보 -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-sm text-gray-500 mb-1">총 입고</div>
+        <div class="text-2xl font-bold text-blue-600">{{ totalInQuantity.toLocaleString() }}개</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-sm text-gray-500 mb-1">총 출고</div>
+        <div class="text-2xl font-bold text-red-600">{{ totalOutQuantity.toLocaleString() }}개</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <div class="text-sm text-gray-500 mb-1">총 건수</div>
+        <div class="text-2xl font-bold">{{ totalCount.toLocaleString() }}건</div>
+      </div>
     </div>
+
+    <!-- 데이터 테이블 -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">일시</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">유형</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">상품코드</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">상품명</th>
+            <th class="px-6 py-3 text-right text-sm font-medium text-gray-500">수량</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">이전재고</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">현재재고</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">담당자</th>
+            <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">비고</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+          <tr v-for="item in movements" :key="item.id">
+            <td class="px-6 py-4">{{ formatDateTime(item.timestamp) }}</td>
+            <td class="px-6 py-4">
+              <StockMovementTypeBadge :type="item.type" />
+            </td>
+            <td class="px-6 py-4">{{ item.productCode }}</td>
+            <td class="px-6 py-4">{{ item.productName }}</td>
+            <td class="px-6 py-4 text-right">
+                <span :class="item.type === 'OUT' ? 'text-red-600' : 'text-blue-600'">
+                  {{ item.type === 'OUT' ? '-' : '+' }}{{ item.quantity.toLocaleString() }}
+                </span>
+            </td>
+            <td class="px-6 py-4">{{ item.previousStock.toLocaleString() }}</td>
+            <td class="px-6 py-4">{{ item.currentStock.toLocaleString() }}</td>
+            <td class="px-6 py-4">{{ item.handler }}</td>
+            <td class="px-6 py-4">{{ item.note }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 페이지네이션 -->
+      <BasePagination
+          v-model:page="currentPage"
+          :total-pages="totalPages"
+          :total-elements="totalElements"
+          :is-first-page="isFirstPage"
+          :is-last-page="isLastPage"
+      />
+    </div>
+
+    <!-- 입고 모달 -->
+    <BaseModal
+        v-model="showStockInModal"
+        title="입고 등록"
+    >
+      <StockMovementForm
+          type="IN"
+          :is-submitting="isSubmitting"
+          @submit="handleStockIn"
+          @cancel="showStockInModal = false"
+      />
+    </BaseModal>
+
+    <!-- 출고 모달 -->
+    <BaseModal
+        v-model="showStockOutModal"
+        title="출고 등록"
+    >
+      <StockMovementForm
+          type="OUT"
+          :is-submitting="isSubmitting"
+          @submit="handleStockOut"
+          @cancel="showStockOutModal = false"
+      />
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useToast } from 'vue-toastification'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseModal from '@/components/base/BaseModal.vue'
+import BasePagination from '@/components/base/BasePagination.vue'
+import StockMovementTypeBadge from '@/components/inventory/StockMovementTypeBadge.vue'
+import StockMovementForm from '@/components/inventory/StockMovementForm.vue'
+import axios from '@/plugins/axios'
 
+const toast = useToast()
+
+// State
 const filters = ref({
-  startDate: '',
-  endDate: '',
-  type: '',
-  product: '',
-  location: ''
+  startDate: null,
+  endDate: null,
+  type: ''
 })
 
-const locations = ['본사 창고', '강남점 창고', '홍대점 창고']
+const currentPage = ref(1)
+const movements = ref([])
+const totalElements = ref(0)
+const totalPages = ref(0)
+const isFirstPage = ref(true)
+const isLastPage = ref(true)
+const totalInQuantity = ref(0)
+const totalOutQuantity = ref(0)
+const totalCount = ref(0)
 
-const movements = ref([
-  {
-    id: 1,
-    datetime: '2024-01-26 15:30',
-    type: 'inbound',
-    product: '에티오피아 예가체프',
-    quantity: 100,
-    location: '본사 창고',
-    manager: '김영희',
-    note: '정기 입고'
-  },
-  {
-    id: 2,
-    datetime: '2024-01-26 14:20',
-    type: 'outbound',
-    product: '바닐라 시럽',
-    quantity: 24,
-    location: '강남점 창고',
-    manager: '이철수',
-    note: '강남점 출고'
-  },
-  {
-    id: 3,
-    datetime: '2024-01-26 11:15',
-    type: 'inbound',
-    product: '크로와상',
-    quantity: 50,
-    location: '홍대점 창고',
-    manager: '박지민',
-    note: '긴급 발주'
+const showStockInModal = ref(false)
+const showStockOutModal = ref(false)
+const isSubmitting = ref(false)
+
+// Options
+const movementTypeOptions = [
+  { value: '', label: '전체' },
+  { value: 'IN', label: '입고' },
+  { value: 'OUT', label: '출고' }
+]
+
+// Methods
+const fetchMovements = async () => {
+  try {
+    const params = {
+      page: currentPage.value - 1,
+      size: 10,
+      startDate: filters.value.startDate,
+      endDate: filters.value.endDate,
+      type: filters.value.type
+    }
+
+    const response = await axios.get('/api/inventory/movements', { params })
+    const data = response.data.data
+
+    movements.value = data.content
+    totalElements.value = data.totalElements
+    totalPages.value = data.totalPages
+    isFirstPage.value = data.first
+    isLastPage.value = data.last
+    totalInQuantity.value = data.totalInQuantity
+    totalOutQuantity.value = data.totalOutQuantity
+    totalCount.value = data.totalElements
+  } catch (error) {
+    toast.error('입/출고 내역을 불러오는데 실패했습니다.')
   }
-])
-
-const getTypeClass = (type) => {
-  return type === 'inbound' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
 }
 
-const openInbound = () => {
-  // 입고 등록 모달
+const handleStockIn = async (data) => {
+  try {
+    isSubmitting.value = true
+    await axios.post('/api/inventory/movement/in', data)
+    toast.success('입고가 등록되었습니다.')
+    showStockInModal.value = false
+    fetchMovements()
+  } catch (error) {
+    toast.error('입고 등록에 실패했습니다.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
-const openOutbound = () => {
-  // 출고 등록 모달
+const handleStockOut = async (data) => {
+  try {
+    isSubmitting.value = true
+    await axios.post('/api/inventory/movement/out', data)
+    toast.success('출고가 등록되었습니다.')
+    showStockOutModal.value = false
+    fetchMovements()
+  } catch (error) {
+    toast.error('출고 등록에 실패했습니다.')
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
-const search = () => {
-  // 검색 로직
+const formatDateTime = (datetime) => {
+  return new Date(datetime).toLocaleString()
 }
+
+// 페이지 변경 감지
+watch(currentPage, () => {
+  fetchMovements()
+})
+
+// 초기 데이터 로드
+fetchMovements()
 </script>

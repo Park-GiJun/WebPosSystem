@@ -4,12 +4,16 @@ server:
   servlet:
     context-path: /
 
+slack:
+  webhook:
+    url: https://hooks.slack.com/services/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
+
 spring:
   profiles:
     active: dev
 
   datasource:
-    url: jdbc:mysql://oracle-db-test.cnaimoi0uiq8.ap-northeast-2.rds.amazonaws.com:3306/WebPosSystem
+    url: jdbc:mysql://14.36.17.234:3306/webpossystem?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
     username: gijunpark
     password: park9832
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -25,11 +29,11 @@ spring:
 
   data:
     redis:
-      host: 15.164.142.172
+      host: 14.36.17.234
       port: 6379
 
   kafka:
-    bootstrap-servers: 15.164.142.172:9092
+    bootstrap-servers: 14.36.17.234:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer

@@ -72,6 +72,12 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+
+    // slack
+    implementation group: 'com.slack.api', name: 'slack-api-client', version: '1.45.2'
+    implementation group: 'com.github.seratch', name: 'jslack', version: '3.4.2'
+
+
 }
 
 tasks.named('test') {
