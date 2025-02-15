@@ -19,7 +19,12 @@ public enum ErrorCode {
     // Common Errors
     INVALID_REQUEST("COMMON_001", "Invalid request"),
     INTERNAL_SERVER_ERROR("COMMON_002", "Internal server error"),
-    ACCESS_DENIED("COMMON_003", "Access denied");
+    ACCESS_DENIED("COMMON_003", "Access denied"),
+
+    DUPLICATE_CODE("RECIPE_001","Duplicate Recipe Code"),
+    PRODUCT_NOT_FOUND("RECIPE_002","Product not found"),
+    RECIPE_NOT_FOUND("RECIPE_003","Recipe not found");
+
 
     private final String code;
     private final String message;

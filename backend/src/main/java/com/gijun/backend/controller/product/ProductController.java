@@ -2,6 +2,7 @@ package com.gijun.backend.controller.product;
 
 import com.gijun.backend.dto.CommonRequestDto;
 import com.gijun.backend.dto.CommonResponseDto;
+import com.gijun.backend.dto.PageResponseDto;
 import com.gijun.backend.dto.product.ProductDTO;
 import com.gijun.backend.service.sis.product.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,10 +45,11 @@ public class ProductController {
 
     @GetMapping
     @Operation(summary = "상품 목록 조회")
-    public ResponseEntity<CommonResponseDto<Page<ProductDTO.ProductResponse>>> getProducts(
+    public ResponseEntity<CommonResponseDto<PageResponseDto<ProductDTO.ProductResponse>>> getProducts(
             @ModelAttribute ProductDTO.ProductSearchRequest searchRequest,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
-        Page<ProductDTO.ProductResponse> response = productService.getProducts(searchRequest, pageable);
+        Page<ProductDTO.ProductResponse> page = productService.getProducts(searchRequest, pageable);
+        PageResponseDto<ProductDTO.ProductResponse> response = new PageResponseDto<>(page);
         return ResponseEntity.ok(CommonResponseDto.success(response));
     }
 

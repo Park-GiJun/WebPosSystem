@@ -120,17 +120,8 @@ const router = createRouter({
                             path: 'history',
                             name: 'History',
                             component: () => import('@/views/sis/inventory/InventoryHistoryView.vue')
-                        },
-                        {
-                            path: 'productCategory',
-                            name: 'ProductCategory',
-                            component: () => import('@/views/sis/category/CategoryManagementView.vue')
-                        },
-                        {
-                            path: 'productManagement',
-                            name: 'ProductManagement',
-                            components: () => import('@/views/sis/product/ProductManagementView.vue')
                         }
+
                     ]
                 },
                 {
@@ -151,6 +142,19 @@ const router = createRouter({
                         //     name: 'CustomerPoints',
                         //     component: () => import('@/views/sis/customers/CustomerPointsView.vue')
                         // }
+                    ]
+                },
+                {
+                    path: 'product',
+                    name: 'Product',
+                    component: () => import('@/views/sis/product/ProductLayout.vue'),
+                    children: [
+                        {
+                            path: 'management',
+                            name: 'Management',
+                            component: () => import('@/views/sis/product/ProductManagement.vue')
+                        }
+
                     ]
                 },
                 {

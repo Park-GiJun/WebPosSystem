@@ -61,10 +61,14 @@ public class Product extends BaseEntity {
     @Column(name = "sale_end_date")
     private LocalDateTime saleEndDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "unit", nullable = false)
+    private ProductUnit unit = ProductUnit.EA;  // 기본값을 EA로 설정
+
     @Builder
     public Product(String code, String name, String description, Category category,
                    BigDecimal price, BigDecimal costPrice, Integer stock, Integer minStock,
-                   Integer maxStock, ProductStatus status, boolean isTaxable) {
+                   Integer maxStock, ProductStatus status, boolean isTaxable, ProductUnit unit) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -76,7 +80,9 @@ public class Product extends BaseEntity {
         this.maxStock = maxStock;
         this.status = status;
         this.isTaxable = isTaxable;
+        this.unit = unit != null ? unit : ProductUnit.EA;
     }
+
     public void updateStock(int quantity) {
         this.stock += quantity;
         if (this.stock < 0) {
@@ -91,7 +97,8 @@ public class Product extends BaseEntity {
     }
 
     public void update(String name, String description, Category category,
-                       BigDecimal price, BigDecimal costPrice, Integer minStock, Integer maxStock) {
+                       BigDecimal price, BigDecimal costPrice, Integer minStock,
+                       Integer maxStock, ProductUnit unit) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -99,11 +106,14 @@ public class Product extends BaseEntity {
         if (costPrice != null) this.costPrice = costPrice;
         if (minStock != null) this.minStock = minStock;
         if (maxStock != null) this.maxStock = maxStock;
+        if (unit != null) this.unit = unit;
     }
+
 
     public void changeStatus(ProductStatus status) {
         this.status = status;
     }
+
     public boolean isAvailable() {
         if (status != ProductStatus.ON_SALE) {
             return false;

@@ -3,6 +3,7 @@ package com.gijun.backend.service.sis.product;
 import com.gijun.backend.domain.sis.product.Category;
 import com.gijun.backend.domain.sis.product.Product;
 import com.gijun.backend.domain.sis.product.ProductStatus;
+import com.gijun.backend.dto.kafka.ProductEvent;
 import com.gijun.backend.dto.product.ProductDTO;
 import com.gijun.backend.repository.sis.product.CategoryRepository;
 import com.gijun.backend.repository.sis.product.ProductRepository;
@@ -48,10 +49,14 @@ public class ProductService {
                 .minStock(request.getMinStock())
                 .maxStock(request.getMaxStock())
                 .status(ProductStatus.ON_SALE)
+                .unit(request.getUnit())
                 .build();
 
         Product savedProduct = productRepository.save(product);
-        kafkaService.sendMessage("product-events", "product.created", savedProduct);
+
+        // 이벤트 데이터 생성 및 전송
+        ProductEvent event = new ProductEvent("product.created", savedProduct);
+//        kafkaService.sendMessage("product-events", event);
 
         return ProductDTO.ProductResponse.from(savedProduct);
     }
@@ -97,7 +102,8 @@ public class ProductService {
                 request.getPrice(),
                 request.getCostPrice(),
                 request.getMinStock(),
-                request.getMaxStock()
+                request.getMaxStock(),
+                request.getUnit()
         );
 
         kafkaService.sendMessage("product-events", "product.updated", product);

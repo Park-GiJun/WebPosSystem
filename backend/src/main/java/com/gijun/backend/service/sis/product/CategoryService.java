@@ -45,7 +45,7 @@ public class CategoryService {
                 .build();
 
         Category savedCategory = categoryRepository.save(category);
-        kafkaService.sendMessage("category-events", "category.created", savedCategory);
+//        kafkaService.sendMessage("category-events", "category.created", savedCategory);
 
         return CategoryDTO.CategoryResponse.from(savedCategory);
     }

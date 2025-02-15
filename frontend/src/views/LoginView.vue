@@ -76,12 +76,12 @@
             {{ isLoading ? '로그인 중...' : '로그인' }}
           </button>
         </form>
-      </div>
-      <div class="mt-6 pt-4 border-t text-sm text-gray-500">
-        <p class="text-center">관리자 계정</p>
-        <div class="flex justify-center gap-4 mt-1">
-          <span>ID: admin</span>
-          <span>PW: admin</span>
+        <div class="mt-6 pt-4 border-t text-sm text-gray-500">
+          <p class="text-center">관리자 계정</p>
+          <div class="flex justify-center gap-4 mt-1">
+            <span>ID: admin</span>
+            <span>PW: admin</span>
+          </div>
         </div>
       </div>
     </div>

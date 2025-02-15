@@ -2,6 +2,7 @@ package com.gijun.backend.dto.product;
 
 import com.gijun.backend.domain.sis.product.Product;
 import com.gijun.backend.domain.sis.product.ProductStatus;
+import com.gijun.backend.domain.sis.product.ProductUnit;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -52,6 +53,9 @@ public class ProductDTO {
         private Integer minStock;
 
         private Integer maxStock;
+
+        private ProductUnit unit;
+
     }
 
     @Data
@@ -74,6 +78,9 @@ public class ProductDTO {
         private Integer minStock;
 
         private Integer maxStock;
+
+        private ProductUnit unit;
+
     }
 
     @Data
@@ -92,6 +99,7 @@ public class ProductDTO {
         private ProductStatus status;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+        private ProductUnit unit;
 
         public static ProductResponse from(Product product) {
             return ProductResponse.builder()
@@ -108,6 +116,7 @@ public class ProductDTO {
                     .status(product.getStatus())
                     .createdAt(product.getCreatedAt())
                     .updatedAt(product.getUpdatedAt())
+                    .unit(product.getUnit())
                     .build();
         }
     }
