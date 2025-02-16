@@ -1,76 +1,19 @@
 package com.gijun.backend.dto.recipe;
 
 import com.gijun.backend.domain.sis.product.ProductStatus;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import com.gijun.backend.domain.sis.recipe.Recipe;
+import com.gijun.backend.domain.sis.recipe.RecipeIngredient;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class RecipeDto {
 
     @Getter
-    @Setter
-    public static class CreateRequest {
-        @NotBlank(message = "레시피 코드는 필수입니다")
-        @Size(max = 20, message = "레시피 코드는 20자를 초과할 수 없습니다")
-        private String code;
-
-        @NotBlank(message = "레시피명은 필수입니다")
-        @Size(max = 100, message = "레시피명은 100자를 초과할 수 없습니다")
-        private String name;
-
-        @Size(max = 500, message = "설명은 500자를 초과할 수 없습니다")
-        private String description;
-
-        @NotNull(message = "판매가는 필수입니다")
-        private BigDecimal price;
-
-        @NotNull(message = "원가는 필수입니다")
-        private BigDecimal costPrice;
-
-        @NotNull(message = "재료 목록은 필수입니다")
-        private List<IngredientRequest> ingredients;
-    }
-
-    @Getter
-    @Setter
-    public static class UpdateRequest {
-        @NotBlank(message = "레시피명은 필수입니다")
-        @Size(max = 100, message = "레시피명은 100자를 초과할 수 없습니다")
-        private String name;
-
-        @Size(max = 500, message = "설명은 500자를 초과할 수 없습니다")
-        private String description;
-
-        @NotNull(message = "판매가는 필수입니다")
-        private BigDecimal price;
-
-        @NotNull(message = "원가는 필수입니다")
-        private BigDecimal costPrice;
-
-        @NotNull(message = "상태는 필수입니다")
-        private ProductStatus status;
-
-        @NotNull(message = "재료 목록은 필수입니다")
-        private List<IngredientRequest> ingredients;
-    }
-
-    @Getter
-    @Setter
-    public static class IngredientRequest {
-        @NotNull(message = "상품 ID는 필수입니다")
-        private Long productId;
-
-        @NotNull(message = "수량은 필수입니다")
-        private Integer quantity;
-    }
-
-    @Getter
-    @Setter
+    @NoArgsConstructor
     public static class Response {
         private Long id;
         private String code;
@@ -80,38 +23,71 @@ public class RecipeDto {
         private BigDecimal costPrice;
         private ProductStatus status;
         private List<IngredientResponse> ingredients;
-        private String createdAt;
-        private String updatedAt;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
 
-        // 생성자 추가 예정
+        public static Response from(Recipe recipe) {
+            Response dto = new Response();
+            dto.id = recipe.getId();
+            dto.code = recipe.getCode();
+            dto.name = recipe.getName();
+            dto.description = recipe.getDescription();
+            dto.price = recipe.getPrice();
+            dto.costPrice = recipe.getCostPrice();
+            dto.status = recipe.getStatus();
+            dto.ingredients = recipe.getIngredients().stream()
+                    .map(IngredientResponse::from)
+                    .toList();
+            dto.createdAt = recipe.getCreatedAt();
+            dto.updatedAt = recipe.getUpdatedAt();
+            return dto;
+        }
     }
 
     @Getter
-    @Setter
+    @NoArgsConstructor
     public static class IngredientResponse {
+        private Long id;
         private Long productId;
-        private String productCode;
         private String productName;
-        private Integer quantity;
+        private int quantity;
 
-        // 생성자 추가 예정
+        public static IngredientResponse from(RecipeIngredient ingredient) {
+            IngredientResponse dto = new IngredientResponse();
+            dto.id = ingredient.getId();
+            dto.productId = ingredient.getProduct().getId();
+            dto.productName = ingredient.getProduct().getName();
+            dto.quantity = ingredient.getQuantity();
+            return dto;
+        }
     }
 
     @Getter
-    @Setter
-    public static class SearchRequest {
-        private String keyword;
+    @NoArgsConstructor
+    public static class CreateRequest {
+        private String code;
+        private String name;
+        private String description;
+        private BigDecimal price;
+        private BigDecimal costPrice;
+        private List<IngredientRequest> ingredients;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class UpdateRequest {
+        private String name;
+        private String description;
+        private BigDecimal price;
+        private BigDecimal costPrice;
         private ProductStatus status;
-        private Integer page = 0;
-        private Integer size = 10;
+        private List<IngredientRequest> ingredients;
     }
 
     @Getter
-    @Setter
-    public static class SearchResponse {
-        private List<Response> content;
-        private long totalElements;
-        private int totalPages;
-        private boolean hasNext;
+    @NoArgsConstructor
+    public static class IngredientRequest {
+        private Long productId;
+        private int quantity;
     }
 }

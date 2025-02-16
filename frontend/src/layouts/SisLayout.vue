@@ -87,7 +87,7 @@ const router = useRouter()
 const route = useRoute()
 
 const isSidebarOpen = ref(true)
-const username = ref('사용자')
+const username = ref(localStorage.getItem("username"))
 const openSubmenus = ref([])
 
 const menuItems = [
@@ -141,6 +141,7 @@ const menuItems = [
     path: '/sis/product',
     submenu: [
       {name: '상품 관리', path:'/sis/product/management'} ,
+      {name: '레시피 관리', path: '/sis/product/recipe'}
     ]
   },
   {
