@@ -24,42 +24,15 @@
               leave-to="opacity-0 scale-95"
           >
             <DialogPanel class="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
-              <DialogTitle class="text-lg font-medium leading-6 text-gray-900 mb-4">
-                {{ editingRecipe ? '레시피 수정' : '레시피 등록' }}
+              <DialogTitle class="text-lg font-bold mb-4">
+                {{ recipe ? '레시피 수정' : '레시피 등록' }}
               </DialogTitle>
 
               <form @submit.prevent="handleSubmit" class="space-y-4">
-                <!-- 상품 선택 -->
+                <!-- 기본 정보 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    상품
-                    <span class="text-red-500">*</span>
-                  </label>
-                  <select
-                      v-model="form.productId"
-                      required
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.productId}"
-                      :disabled="editingRecipe"
-                  >
-                    <option value="">상품 선택</option>
-                    <option
-                        v-for="product in products"
-                        :key="product.id"
-                        :value="product.id"
-                    >
-                      {{ product.name }}
-                    </option>
-                  </select>
-                  <p v-if="errors.productId" class="mt-1 text-sm text-red-500">
-                    {{ errors.productId }}
-                  </p>
-                </div>
-
-                <!-- 레시피 이름 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    레시피 이름
+                    레시피명
                     <span class="text-red-500">*</span>
                   </label>
                   <input
@@ -67,7 +40,7 @@
                       v-model="form.name"
                       required
                       maxlength="100"
-                      class="w-full px-4 py-2 border rounded-lg"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                       :class="{'border-red-500': errors.name}"
                   />
                   <p v-if="errors.name" class="mt-1 text-sm text-red-500">
@@ -75,116 +48,178 @@
                   </p>
                 </div>
 
-                <!-- 소요 시간 -->
+                <!-- 카테고리 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    소요 시간 (분)
+                    카테고리
+                    <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                      v-model="form.categoryId"
+                      required
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.categoryId}"
+                  >
+                    <option value="">카테고리 선택</option>
+                    <option
+                        v-for="category in categories"
+                        :key="category.id"
+                        :value="category.id"
+                    >
+                      {{ category.name }}
+                    </option>
+                  </select>
+                  <p v-if="errors.categoryId" class="mt-1 text-sm text-red-500">
+                    {{ errors.categoryId }}
+                  </p>
+                </div>
+
+                <!-- 재료 목록 -->
+                <div>
+                  <div class="flex justify-between items-center mb-2">
+                    <label class="block text-sm font-medium text-gray-700">
+                      재료
+                      <span class="text-red-500">*</span>
+                    </label>
+                    <button
+                        type="button"
+                        @click="addIngredient"
+                        class="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                    >
+                      + 재료 추가
+                    </button>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div
+                        v-for="(ingredient, index) in form.ingredients"
+                        :key="index"
+                        class="flex gap-2 items-start"
+                    >
+                      <input
+                          type="text"
+                          v-model="ingredient.name"
+                          placeholder="재료명"
+                          required
+                          class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                          type="number"
+                          v-model.number="ingredient.amount"
+                          placeholder="수량"
+                          required
+                          min="0"
+                          step="0.1"
+                          class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <select
+                          v-model="ingredient.unit"
+                          required
+                          class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="g">g</option>
+                        <option value="ml">ml</option>
+                        <option value="개">개</option>
+                        <option value="컵">컵</option>
+                        <option value="oz">oz</option>
+                        <option value="tbsp">tbsp</option>
+                        <option value="tsp">tsp</option>
+                      </select>
+                      <button
+                          type="button"
+                          @click="removeIngredient(index)"
+                          class="p-2 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <XIcon class="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p v-if="errors.ingredients" class="mt-1 text-sm text-red-500">
+                    {{ errors.ingredients }}
+                  </p>
+                </div>
+
+                <!-- 가격 정보 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    판매가
                     <span class="text-red-500">*</span>
                   </label>
                   <input
                       type="number"
-                      v-model.number="form.preparationTime"
+                      v-model.number="form.price"
                       required
-                      min="1"
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.preparationTime}"
+                      min="0"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.price}"
                   />
-                  <p v-if="errors.preparationTime" class="mt-1 text-sm text-red-500">
-                    {{ errors.preparationTime }}
+                  <p v-if="errors.price" class="mt-1 text-sm text-red-500">
+                    {{ errors.price }}
                   </p>
                 </div>
 
-                <!-- 필요 도구 -->
+                <!-- 조리 시간 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    필요 도구
-                  </label>
-                  <div class="space-y-2">
-                    <div v-for="(tool, index) in form.tools" :key="index" class="flex gap-2">
-                      <input
-                          type="text"
-                          v-model="form.tools[index]"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          placeholder="도구 이름"
-                      />
-                      <button
-                          type="button"
-                          @click="removeTool(index)"
-                          class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                    <button
-                        type="button"
-                        @click="addTool"
-                        class="w-full px-4 py-2 text-sm border border-dashed rounded-lg hover:bg-gray-50"
-                    >
-                      도구 추가
-                    </button>
-                  </div>
-                </div>
-
-                <!-- 레시피 단계 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    레시피 단계
+                    조리 시간 (분)
                     <span class="text-red-500">*</span>
                   </label>
-                  <div class="space-y-2">
-                    <div
-                        v-for="(step, index) in form.steps"
-                        :key="index"
-                        class="flex gap-2"
-                    >
-                      <div class="flex-none w-12 h-12 flex items-center justify-center bg-gray-100 rounded-lg">
-                        {{ index + 1 }}
-                      </div>
-                      <div class="flex-1">
-                        <textarea
-                            v-model="form.steps[index].description"
-                            rows="2"
-                            class="w-full px-4 py-2 border rounded-lg"
-                            :class="{'border-red-500': errors[`steps.${index}`]}"
-                            placeholder="단계 설명"
-                        ></textarea>
-                        <p v-if="errors[`steps.${index}`]" class="mt-1 text-sm text-red-500">
-                          {{ errors[`steps.${index}`] }}
-                        </p>
-                      </div>
-                      <button
-                          type="button"
-                          @click="removeStep(index)"
-                          class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                    <button
-                        type="button"
-                        @click="addStep"
-                        class="w-full px-4 py-2 text-sm border border-dashed rounded-lg hover:bg-gray-50"
-                    >
-                      단계 추가
-                    </button>
-                  </div>
+                  <input
+                      type="number"
+                      v-model.number="form.cookingTime"
+                      required
+                      min="1"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.cookingTime}"
+                  />
+                  <p v-if="errors.cookingTime" class="mt-1 text-sm text-red-500">
+                    {{ errors.cookingTime }}
+                  </p>
                 </div>
 
-                <!-- 주의사항 -->
+                <!-- 조리 방법 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    주의사항
+                    조리 방법
+                    <span class="text-red-500">*</span>
                   </label>
                   <textarea
-                      v-model="form.notes"
-                      rows="3"
-                      maxlength="500"
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.notes}"
+                      v-model="form.instructions"
+                      rows="4"
+                      required
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.instructions}"
                   ></textarea>
-                  <p v-if="errors.notes" class="mt-1 text-sm text-red-500">
-                    {{ errors.notes }}
+                  <p v-if="errors.instructions" class="mt-1 text-sm text-red-500">
+                    {{ errors.instructions }}
                   </p>
+                </div>
+
+                <!-- 상태 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    상태
+                  </label>
+                  <div class="flex gap-4">
+                    <label class="flex items-center">
+                      <input
+                          type="radio"
+                          v-model="form.status"
+                          value="ACTIVE"
+                          class="mr-2"
+                      />
+                      <span>활성</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input
+                          type="radio"
+                          v-model="form.status"
+                          value="INACTIVE"
+                          class="mr-2"
+                      />
+                      <span>비활성</span>
+                    </label>
+                  </div>
                 </div>
 
                 <!-- 버튼 영역 -->
@@ -214,153 +249,142 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch } from 'vue';
 import {
   TransitionRoot,
   TransitionChild,
   Dialog,
   DialogPanel,
   DialogTitle,
-} from '@headlessui/vue'
-import axios from '@/plugins/axios'
-import { useToast } from 'vue-toastification'
+} from '@headlessui/vue';
+import { XIcon } from 'lucide-vue-next';
 
 const props = defineProps({
   show: Boolean,
-  products: {
-    type: Array,
-    default: () => []
-  },
-  editingRecipe: {
+  recipe: {
     type: Object,
     default: null
+  },
+  categories: {
+    type: Array,
+    default: () => []
   }
-})
+});
 
-const emit = defineEmits(['update:show', 'refresh'])
-const toast = useToast()
+const emit = defineEmits(['close', 'submit']);
 
-// 폼 상태
+// Form state
 const form = ref({
-  productId: '',
   name: '',
-  preparationTime: 0,
-  tools: [],
-  steps: [],
-  notes: ''
-})
+  categoryId: '',
+  ingredients: [],
+  price: 0,
+  cookingTime: 0,
+  instructions: '',
+  status: 'ACTIVE'
+});
 
-const errors = ref({})
-const isSubmitting = ref(false)
+const errors = ref({});
+const isSubmitting = ref(false);
 
-// 도구 추가/제거
-const addTool = () => {
-  form.value.tools.push('')
-}
-
-const removeTool = (index) => {
-  form.value.tools.splice(index, 1)
-}
-
-// 단계 추가/제거
-const addStep = () => {
-  form.value.steps.push({ description: '' })
-}
-
-const removeStep = (index) => {
-  form.value.steps.splice(index, 1)
-}
-
-// 유효성 검사
-const validateForm = () => {
-  errors.value = {}
-
-  if (!form.value.productId) {
-    errors.value.productId = '상품을 선택해주세요'
-  }
-
-  if (!form.value.name) {
-    errors.value.name = '레시피 이름은 필수입니다'
-  }
-
-  if (form.value.preparationTime < 1) {
-    errors.value.preparationTime = '소요 시간은 1분 이상이어야 합니다'
-  }
-
-  form.value.steps.forEach((step, index) => {
-    if (!step.description) {
-      errors.value[`steps.${index}`] = '단계 설명은 필수입니다'
-    }
-  })
-
-  return Object.keys(errors.value).length === 0
-}
-
-// 폼 초기화
-watch(() => props.editingRecipe, (recipe) => {
+watch(() => props.recipe, (recipe) => {
   if (recipe) {
     form.value = {
-      productId: recipe.productId,
       name: recipe.name,
-      preparationTime: recipe.preparationTime,
-      tools: [...recipe.tools],
-      steps: [...recipe.steps],
-      notes: recipe.notes || ''
-    }
+      categoryId: recipe.categoryId,
+      ingredients: [...recipe.ingredients],
+      price: recipe.price,
+      cookingTime: recipe.cookingTime,
+      instructions: recipe.instructions,
+      status: recipe.status
+    };
   } else {
     form.value = {
-      productId: '',
       name: '',
-      preparationTime: 0,
-      tools: [],
-      steps: [],
-      notes: ''
-    }
+      categoryId: '',
+      ingredients: [{ name: '', amount: 0, unit: 'g' }],
+      price: 0,
+      cookingTime: 0,
+      instructions: '',
+      status: 'ACTIVE'
+    };
   }
-}, { immediate: true })
+}, { immediate: true });
 
-// 폼 제출
+const validateForm = () => {
+  errors.value = {};
+
+  if (!form.value.name) {
+    errors.value.name = '레시피명은 필수입니다.';
+  }
+
+  if (!form.value.categoryId) {
+    errors.value.categoryId = '카테고리는 필수입니다.';
+  }
+
+  if (!form.value.ingredients.length) {
+    errors.value.ingredients = '최소 1개 이상의 재료가 필요합니다.';
+  }
+
+  const hasEmptyIngredient = form.value.ingredients.some(
+      ing => !ing.name || ing.amount <= 0
+  );
+
+  if (hasEmptyIngredient) {
+    errors.value.ingredients = '모든 재료의 정보를 입력해주세요.';
+  }
+
+  if (form.value.price < 0) {
+    errors.value.price = '가격은 0 이상이어야 합니다.';
+  }
+
+  if (form.value.cookingTime <= 0) {
+    errors.value.cookingTime = '조리 시간은 1분 이상이어야 합니다.';
+  }
+
+  if (!form.value.instructions) {
+    errors.value.instructions = '조리 방법은 필수입니다.';
+  }
+
+  return Object.keys(errors.value).length === 0;
+};
+
+const addIngredient = () => {
+  form.value.ingredients.push({ name: '', amount: 0, unit: 'g' });
+};
+
+const removeIngredient = (index) => {
+  if (form.value.ingredients.length > 1) {
+    form.value.ingredients.splice(index, 1);
+  }
+};
+
 const handleSubmit = async () => {
+  if (!validateForm()) return;
+
   try {
-    if (!validateForm()) return
+    isSubmitting.value = true;
 
-    isSubmitting.value = true
+    const data = {
+      ...form.value,
+      categoryId: Number(form.value.categoryId),
+      price: Number(form.value.price),
+      cookingTime: Number(form.value.cookingTime),
+      ingredients: form.value.ingredients.map(ing => ({
+        ...ing,
+        amount: Number(ing.amount)
+      }))
+    };
 
-    if (props.editingRecipe) {
-      await axios.put(`/api/recipes/${props.editingRecipe.id}`, {
-        data: form.value
-      })
-      toast.success('레시피가 수정되었습니다')
-    } else {
-      await axios.post('/api/recipes', {
-        data: form.value
-      })
-      toast.success('레시피가 등록되었습니다')
-    }
-
-    emit('refresh')
-    onClose()
+    emit('submit', data);
   } catch (error) {
-    if (error.response?.data?.errors) {
-      errors.value = error.response.data.errors
-    } else {
-      toast.error('레시피 저장에 실패했습니다')
-    }
+    console.error('Form submission error:', error);
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
-}
+};
 
 const onClose = () => {
-  emit('update:show', false)
-  errors.value = {}
-  form.value = {
-    productId: '',
-    name: '',
-    preparationTime: 0,
-    tools: [],
-    steps: [],
-    notes: ''
-  }
-}
+  emit('close');
+};
 </script>

@@ -4,8 +4,8 @@ import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
 const instance = axios.create({
-    // baseURL: "http://localhost:9832/api"
-    baseURL: "https://gijun.net/api"
+    baseURL: "http://localhost:9832/api"
+    // baseURL: "https://gijun.net/api"
 })
 
 // 에러 코드별 한글 메시지 매핑

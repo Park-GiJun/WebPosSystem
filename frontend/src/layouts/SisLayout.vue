@@ -124,24 +124,24 @@ const menuItems = [
       { name: '결제 통계', path: '/sis/payments/stats' }
     ]
   },
-  {
-    name: '재고관리',
-    icon: Boxes,
-    path: '/sis/inventory',
-    submenu: [
-      { name: '재고 현황', path: '/sis/inventory/status' },
-      { name: '입/출고 관리', path: '/sis/inventory/movement' },
-      { name: '재고 관리', path: '/sis/inventory/list' },
-      { name: '재고 이력', path: '/sis/inventory/history' },
-    ]
-  },
+  // {
+  //   name: '재고관리',
+  //   icon: Boxes,
+  //   path: '/sis/inventory',
+  //   submenu: [
+  //     { name: '재고 현황', path: '/sis/inventory/status' },
+  //     { name: '입/출고 관리', path: '/sis/inventory/movement' },
+  //     { name: '재고 관리', path: '/sis/inventory/list' },
+  //     { name: '재고 이력', path: '/sis/inventory/history' },
+  //   ]
+  // },
   {
     name: '상품관리',
     icon: Boxes,
     path: '/sis/product',
     submenu: [
       {name: '상품 관리', path:'/sis/product/management'} ,
-      {name: '레시피 관리', path: '/sis/product/recipe'}
+      {name: '레시피 관리', path: '/sis/product/recipeManagement'}
     ]
   },
   {

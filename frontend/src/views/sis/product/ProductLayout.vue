@@ -34,6 +34,7 @@ const route = useRoute()
 
 const navItems = [
   { name: '상품 관리', path: '/sis/product/management' },
+  { name: '레시피 관리', path: '/sis/product/recipeManagement'}
 ]
 
 const isCurrentRoute = (path) => route.path === path
