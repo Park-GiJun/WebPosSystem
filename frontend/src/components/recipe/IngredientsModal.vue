@@ -1,4 +1,4 @@
-<!-- components/ingredients/IngredientsModal.vue -->
+<!-- components/recipe/IngredientModal.vue -->
 <template>
   <TransitionRoot appear :show="show" as="template">
     <Dialog as="div" @close="onClose" class="relative z-50">
@@ -24,294 +24,101 @@
               leave-to="opacity-0 scale-95"
           >
             <DialogPanel class="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
-              <DialogTitle class="text-lg font-medium leading-6 text-gray-900 mb-4">
-                {{ editingIngredient ? '재료 수정' : '재료 등록' }}
-              </DialogTitle>
+              <div class="flex justify-between items-center mb-4">
+                <DialogTitle class="text-lg font-bold">재료 선택</DialogTitle>
+                <button
+                    type="button"
+                    @click="onClose"
+                    class="text-gray-400 hover:text-gray-500"
+                >
+                  <XIcon class="h-6 w-6" />
+                </button>
+              </div>
 
-              <form @submit.prevent="handleSubmit" class="space-y-4">
-                <!-- 재료 코드 (신규 등록시에만) -->
-                <div v-if="!editingIngredient">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    재료 코드
-                    <span class="text-red-500">*</span>
-                  </label>
+              <!-- 검색 필터 -->
+              <div class="mb-4">
+                <div class="relative">
                   <input
                       type="text"
-                      v-model="form.code"
-                      required
-                      maxlength="20"
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.code}"
+                      v-model="searchKeyword"
+                      placeholder="재료명 검색..."
+                      class="w-full px-4 py-2 pr-10 border rounded-lg"
                   />
-                  <p v-if="errors.code" class="mt-1 text-sm text-red-500">
-                    {{ errors.code }}
-                  </p>
+                  <SearchIcon class="w-5 h-5 text-gray-400 absolute right-3 top-2.5" />
                 </div>
+              </div>
 
-                <!-- 재료명 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    재료명
-                    <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                      type="text"
-                      v-model="form.name"
-                      required
-                      maxlength="100"
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.name}"
-                  />
-                  <p v-if="errors.name" class="mt-1 text-sm text-red-500">
-                    {{ errors.name }}
-                  </p>
-                </div>
+              <!-- 재료 목록 -->
+              <div class="h-96 overflow-y-auto border rounded-lg">
+                <table class="w-full">
+                  <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">재료명</th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">기본 단위</th>
+                    <th class="px-4 py-3 text-right text-sm font-medium text-gray-500">단가</th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">선택</th>
+                  </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                  <tr v-for="ingredient in filteredIngredients" :key="ingredient.id">
+                    <td class="px-4 py-3">{{ ingredient.name }}</td>
+                    <td class="px-4 py-3">{{ ingredient.unit }}</td>
+                    <td class="px-4 py-3 text-right">
+                      {{ formatPrice(ingredient.unitPrice) }}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                      <button
+                          @click="selectIngredient(ingredient)"
+                          class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                      >
+                        선택
+                      </button>
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
 
-                <!-- 카테고리 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    카테고리
-                    <span class="text-red-500">*</span>
-                  </label>
-                  <select
-                      v-model="form.categoryId"
-                      required
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.categoryId}"
-                  >
-                    <option value="">카테고리 선택</option>
-                    <option
-                        v-for="category in categories"
-                        :key="category.id"
-                        :value="category.id"
-                    >
-                      {{ category.name }}
-                    </option>
-                  </select>
-                  <p v-if="errors.categoryId" class="mt-1 text-sm text-red-500">
-                    {{ errors.categoryId }}
-                  </p>
-                </div>
-
-                <!-- 단위 정보 -->
+              <!-- 선택된 재료 입력 -->
+              <div v-if="selectedIngredient" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-medium mb-3">재료 정보 입력</h3>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                      기본 단위
-                      <span class="text-red-500">*</span>
-                    </label>
-                    <select
-                        v-model="form.unit"
-                        required
-                        class="w-full px-4 py-2 border rounded-lg"
-                        :class="{'border-red-500': errors.unit}"
-                    >
-                      <option value="">단위 선택</option>
-                      <option value="g">그램(g)</option>
-                      <option value="ml">밀리리터(ml)</option>
-                      <option value="ea">개(ea)</option>
-                      <option value="pack">팩(pack)</option>
-                    </select>
-                    <p v-if="errors.unit" class="mt-1 text-sm text-red-500">
-                      {{ errors.unit }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      포장 단위
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                          type="number"
-                          v-model.number="form.packageSize"
-                          min="0"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.packageSize}"
-                      />
-                      <span class="py-2">{{ form.unit }}</span>
-                    </div>
-                    <p v-if="errors.packageSize" class="mt-1 text-sm text-red-500">
-                      {{ errors.packageSize }}
-                    </p>
-                  </div>
-                </div>
-
-                <!-- 가격 정보 -->
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      단가 (1{{ form.unit }}당)
-                      <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex gap-2 items-center">
-                      <span>₩</span>
-                      <input
-                          type="number"
-                          v-model.number="form.unitPrice"
-                          required
-                          min="0"
-                          step="0.1"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.unitPrice}"
-                      />
-                    </div>
-                    <p v-if="errors.unitPrice" class="mt-1 text-sm text-red-500">
-                      {{ errors.unitPrice }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      포장 가격
-                    </label>
-                    <div class="flex gap-2 items-center">
-                      <span>₩</span>
-                      <input
-                          type="number"
-                          v-model.number="form.packagePrice"
-                          min="0"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.packagePrice}"
-                      />
-                    </div>
-                    <p v-if="errors.packagePrice" class="mt-1 text-sm text-red-500">
-                      {{ errors.packagePrice }}
-                    </p>
-                  </div>
-                </div>
-
-                <!-- 재고 관리 -->
-                <div class="grid grid-cols-3 gap-4">
-                  <div v-if="!editingIngredient">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      초기 재고
-                      <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                          type="number"
-                          v-model.number="form.stock"
-                          required
-                          min="0"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.stock}"
-                      />
-                      <span class="py-2">{{ form.unit }}</span>
-                    </div>
-                    <p v-if="errors.stock" class="mt-1 text-sm text-red-500">
-                      {{ errors.stock }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      최소 재고
-                      <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                          type="number"
-                          v-model.number="form.minStock"
-                          required
-                          min="0"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.minStock}"
-                      />
-                      <span class="py-2">{{ form.unit }}</span>
-                    </div>
-                    <p v-if="errors.minStock" class="mt-1 text-sm text-red-500">
-                      {{ errors.minStock }}
-                    </p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      최대 재고
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                          type="number"
-                          v-model.number="form.maxStock"
-                          min="0"
-                          class="flex-1 px-4 py-2 border rounded-lg"
-                          :class="{'border-red-500': errors.maxStock}"
-                      />
-                      <span class="py-2">{{ form.unit }}</span>
-                    </div>
-                    <p v-if="errors.maxStock" class="mt-1 text-sm text-red-500">
-                      {{ errors.maxStock }}
-                    </p>
-                  </div>
-                </div>
-
-                <!-- 보관 정보 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    보관 방법
-                  </label>
-                  <textarea
-                      v-model="form.storageInstructions"
-                      rows="2"
-                      maxlength="200"
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.storageInstructions}"
-                      placeholder="온도, 습도 등 보관 시 주의사항"
-                  ></textarea>
-                  <p v-if="errors.storageInstructions" class="mt-1 text-sm text-red-500">
-                    {{ errors.storageInstructions }}
-                  </p>
-                </div>
-
-                <!-- 유통기한 -->
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      유통기한 (일)
+                      수량
                     </label>
                     <input
                         type="number"
-                        v-model.number="form.shelfLife"
-                        min="0"
+                        v-model.number="amount"
+                        min="0.1"
+                        step="0.1"
                         class="w-full px-4 py-2 border rounded-lg"
-                        :class="{'border-red-500': errors.shelfLife}"
                     />
-                    <p v-if="errors.shelfLife" class="mt-1 text-sm text-red-500">
-                      {{ errors.shelfLife }}
-                    </p>
                   </div>
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                      알레르기 유발
+                      단위
                     </label>
                     <select
-                        v-model="form.allergen"
+                        v-model="unit"
                         class="w-full px-4 py-2 border rounded-lg"
                     >
-                      <option value="">해당 없음</option>
-                      <option value="milk">우유</option>
-                      <option value="egg">계란</option>
-                      <option value="nuts">견과류</option>
-                      <option value="wheat">밀</option>
-                      <option value="soy">대두</option>
+                      <option :value="selectedIngredient.unit">
+                        {{ selectedIngredient.unit }}
+                      </option>
+                      <!-- 추가 단위 변환 옵션들 -->
                     </select>
                   </div>
                 </div>
-
-                <!-- 버튼 영역 -->
-                <div class="flex justify-end gap-3 mt-6">
+                <div class="flex justify-end mt-4">
                   <button
-                      type="button"
-                      @click="onClose"
-                      class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                      @click="addIngredient"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    취소
-                  </button>
-                  <button
-                      type="submit"
-                      :disabled="isSubmitting"
-                      class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {{ isSubmitting ? '저장 중...' : '저장' }}
+                    추가
                   </button>
                 </div>
-              </form>
+              </div>
             </DialogPanel>
           </TransitionChild>
         </div>
@@ -321,132 +128,64 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import {
-  TransitionRoot,
-  TransitionChild,
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-} from '@headlessui/vue'
-import axios from '@/plugins/axios'
-import { useToast } from 'vue-toastification'
+import { ref, computed } from 'vue';
+import { Dialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild } from '@headlessui/vue';
+import { XIcon, SearchIcon } from 'lucide-vue-next';
 
 const props = defineProps({
   show: Boolean,
-  categories: {
+  ingredients: {
     type: Array,
     default: () => []
-  },
-  editingIngredient: {
-    type: Object,
-    default: null
   }
-})
+});
 
-const emit = defineEmits(['update:show', 'refresh'])
-const toast = useToast()
+const emit = defineEmits(['close', 'select']);
 
-// 폼 상태
-const form = ref({
-  code: '',
-  name: '',
-  categoryId: '',
-  unit: '',
-  packageSize: 0,
-  unitPrice: 0,
-  packagePrice: 0,
-  stock: 0,
-  minStock: 0,
-  maxStock: null,
-  storageInstructions: '',
-  shelfLife: 0,
-  allergen: ''
-})
+const searchKeyword = ref('');
+const selectedIngredient = ref(null);
+const amount = ref(1);
+const unit = ref('');
 
-const errors = ref({})
-const isSubmitting = ref(false)
+const filteredIngredients = computed(() => {
+  if (!searchKeyword.value) return props.ingredients;
+  const keyword = searchKeyword.value.toLowerCase();
+  return props.ingredients.filter(ing =>
+      ing.name.toLowerCase().includes(keyword)
+  );
+});
 
-// 유효성 검사
-const validateForm = () => {
-  errors.value = {}
+const selectIngredient = (ingredient) => {
+  selectedIngredient.value = ingredient;
+  unit.value = ingredient.unit;
+};
 
-  if (!form.value.code && !props.editingIngredient) {
-    errors.value.code = '재료 코드를 입력하세요.'
-  }
-  if (!form.value.name) {
-    errors.value.name = '재료명을 입력하세요.'
-  }
-  if (!form.value.categoryId) {
-    errors.value.categoryId = '카테고리를 선택하세요.'
-  }
-  if (!form.value.unit) {
-    errors.value.unit = '기본 단위를 선택하세요.'
-  }
-  if (form.value.unitPrice <= 0) {
-    errors.value.unitPrice = '단가는 0보다 커야 합니다.'
-  }
-  if (form.value.minStock < 0) {
-    errors.value.minStock = '최소 재고는 0 이상이어야 합니다.'
-  }
-  if (form.value.maxStock !== null && form.value.maxStock < form.value.minStock) {
-    errors.value.maxStock = '최대 재고는 최소 재고보다 커야 합니다.'
-  }
+const addIngredient = () => {
+  if (!selectedIngredient.value || amount.value <= 0) return;
 
-  return Object.keys(errors.value).length === 0
-}
+  emit('select', {
+    id: selectedIngredient.value.id,
+    name: selectedIngredient.value.name,
+    amount: amount.value,
+    unit: unit.value,
+    unitPrice: selectedIngredient.value.unitPrice
+  });
 
-// 폼 제출 처리
-const handleSubmit = async () => {
-  if (!validateForm()) return
+  resetForm();
+};
 
-  isSubmitting.value = true
-  try {
-    if (props.editingIngredient) {
-      await axios.put(`/ingredients/${props.editingIngredient.id}`, form.value)
-      toast.success('재료 정보가 수정되었습니다.')
-    } else {
-      await axios.post('/ingredients', form.value)
-      toast.success('새로운 재료가 등록되었습니다.')
-    }
-    emit('refresh')
-    onClose()
-  } catch (error) {
-    toast.error('저장 중 오류가 발생했습니다.')
-  } finally {
-    isSubmitting.value = false
-  }
-}
+const resetForm = () => {
+  selectedIngredient.value = null;
+  amount.value = 1;
+  unit.value = '';
+};
 
-// 모달 닫기
 const onClose = () => {
-  emit('update:show', false)
-}
+  resetForm();
+  emit('close');
+};
 
-// 편집 모드에서 데이터 설정
-watch(
-    () => props.editingIngredient,
-    (newIngredient) => {
-      if (newIngredient) {
-        form.value = { ...newIngredient }
-      } else {
-        form.value = {
-          code: '',
-          name: '',
-          categoryId: '',
-          unit: '',
-          packageSize: 0,
-          unitPrice: 0,
-          packagePrice: 0,
-          stock: 0,
-          minStock: 0,
-          maxStock: null,
-          storageInstructions: '',
-          shelfLife: 0,
-          allergen: ''
-        }
-      }
-    },
-    { immediate: true }
-)
+const formatPrice = (price) => {
+  return `₩${price.toLocaleString()}`;
+};
 </script>

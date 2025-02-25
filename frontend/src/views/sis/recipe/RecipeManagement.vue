@@ -124,21 +124,22 @@
       </table>
 
       <!-- Pagination -->
+      <!-- Pagination 부분 수정 -->
       <div class="flex justify-between items-center px-6 py-4 border-t">
         <div class="text-sm text-gray-500">
           총 {{ totalCount }}개 레시피
         </div>
         <div class="flex gap-2">
           <button
-              v-for="page in totalPages"
-              :key="page"
-              @click="currentPage = page"
+              v-for="pageNum in pageNumbers"
+              :key="pageNum"
+              @click="currentPage = pageNum"
               :class="[
-              'px-3 py-1 rounded',
-              currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-100'
-            ]"
+          'px-3 py-1 rounded',
+          currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-100'
+        ]"
           >
-            {{ page }}
+            {{ pageNum }}
           </button>
         </div>
       </div>
@@ -154,6 +155,15 @@
       @close="closeRecipeModal"
       @submit="handleRecipeSubmit"
   />
+
+  <!-- 재료 선택 모달 -->
+  <IngredientModal
+      v-if="showIngredientModal"
+      :show="showIngredientModal"
+      :ingredients="availableIngredients"
+      @close="showIngredientModal = false"
+      @select="handleIngredientSelect"
+  />
 </template>
 
 <script setup>
@@ -161,6 +171,7 @@ import {ref, computed, onMounted, watch} from 'vue';
 import axios from "@/plugins/axios.js";
 import { PlusIcon, PencilIcon, TrashIcon, SearchIcon } from 'lucide-vue-next';
 import RecipeModal from '@/components/recipe/RecipeModal.vue';
+import IngredientsModal from "@/components/recipe/IngredientsModal.vue";
 import { useToast } from 'vue-toastification';
 
 const toast = useToast();
@@ -177,6 +188,31 @@ const searchParams = ref({
 });
 const showRecipeModal = ref(false);
 const editingRecipe = ref(null);
+const pageSize = 10; // 페이지당 항목 수 명시적 정의
+const showIngredientModal = ref(false);
+
+// 재료 선택 핸들러
+const handleIngredientSelect = (ingredient) => {
+  form.value.ingredients.push(ingredient);
+  showIngredientModal.value = false;
+};
+
+const availableIngredients = ref([
+  {
+    id: 1,
+    name: '우유',
+    unit: 'ml',
+    unitPrice: 4
+  },
+  {
+    id: 2,
+    name: '원두',
+    unit: 'g',
+    unitPrice: 50
+  },
+  // ... 더 많은 재료들
+]);
+
 
 // Computed
 const totalPages = computed(() => Math.ceil(totalCount.value / 10));
