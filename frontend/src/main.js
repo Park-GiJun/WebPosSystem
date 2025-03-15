@@ -6,14 +6,14 @@ import App from './App.vue'
 import router from './router'
 import './style.css'
 import './plugins/axios'
-import HealthCheckPlugin from './plugins/healthCheck'
+// import HealthCheckPlugin from './plugins/healthCheck'
 
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
 app.use(router)
-app.use(HealthCheckPlugin)
+// app.use(HealthCheckPlugin)
 app.use(Toast, {
     position: "bottom-left",
     timeout: 2000,
