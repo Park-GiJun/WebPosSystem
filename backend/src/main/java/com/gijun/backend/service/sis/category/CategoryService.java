@@ -1,13 +1,11 @@
-package com.gijun.backend.service.sis.product;
+package com.gijun.backend.service.sis.category;
 
-import com.gijun.backend.domain.sis.product.Category;
-import com.gijun.backend.dto.product.CategoryDTO;
-import com.gijun.backend.dto.product.CategoryHierarchyDto;
-import com.gijun.backend.repository.sis.product.CategoryRepository;
-import com.gijun.backend.service.KafkaService;
-import jakarta.persistence.EntityNotFoundException;
+import com.gijun.backend.domain.sis.category.Category;
+import com.gijun.backend.dto.category.CategoryDTO;
+import com.gijun.backend.repository.sis.category.CategoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DuplicateKeyException;
+import org.apache.kafka.common.errors.DuplicateResourceException;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,20 +20,22 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final KafkaService kafkaService;
 
     @Transactional
     public CategoryDTO.CategoryResponse createCategory(CategoryDTO.CategoryCreateRequest request) {
+        // Check if category code or name already exists
+        if (categoryRepository.existsByCodeOrName(request.getCode(), request.getName())) {
+            throw new DuplicateResourceException("Category code or name already exists");
+        }
+
+        // Find parent category if parentId is provided
         Category parent = null;
         if (request.getParentId() != null) {
             parent = categoryRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
         }
 
-        if (categoryRepository.existsByCodeOrName(request.getCode(), request.getName())) {
-            throw new DuplicateKeyException("Category code or name already exists");
-        }
-
+        // Create new category
         Category category = Category.builder()
                 .code(request.getCode())
                 .name(request.getName())
@@ -45,8 +45,6 @@ public class CategoryService {
                 .build();
 
         Category savedCategory = categoryRepository.save(category);
-//        kafkaService.sendMessage("category-events", "category.created", savedCategory);
-
         return CategoryDTO.CategoryResponse.from(savedCategory);
     }
 
@@ -57,7 +55,7 @@ public class CategoryService {
 
     public List<CategoryDTO.CategoryResponse> getSubcategories(Long parentId) {
         Category parent = categoryRepository.findById(parentId)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         return categoryRepository.findByParentOrderByOrderNumAsc(parent)
                 .stream()
@@ -68,12 +66,12 @@ public class CategoryService {
     @Transactional
     public CategoryDTO.CategoryResponse updateCategory(Long id, CategoryDTO.CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         Category parent = null;
         if (request.getParentId() != null) {
             parent = categoryRepository.findById(request.getParentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Parent category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent category not found"));
         }
 
         category.updateInfo(
@@ -83,20 +81,25 @@ public class CategoryService {
                 request.getDescription()
         );
 
-        kafkaService.sendMessage("category-events", "category.updated", category);
         return CategoryDTO.CategoryResponse.from(category);
     }
 
     @Transactional
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         if (!category.getProducts().isEmpty()) {
             throw new IllegalStateException("Cannot delete category with products");
         }
 
-        category.delete();
-        kafkaService.sendMessage("category-events", "category.deleted", id);
+        categoryRepository.delete(category);
+    }
+
+    public List<CategoryDTO.CategoryResponse> searchCategories(String keyword) {
+        return categoryRepository.findByKeyword(keyword)
+                .stream()
+                .map(CategoryDTO.CategoryResponse::from)
+                .collect(Collectors.toList());
     }
 }

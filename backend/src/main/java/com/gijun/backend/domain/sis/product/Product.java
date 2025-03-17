@@ -1,6 +1,11 @@
 package com.gijun.backend.domain.sis.product;
 
 import com.gijun.backend.domain.BaseEntity;
+import com.gijun.backend.domain.sis.category.Category;
+import com.gijun.backend.domain.sis.category.ProductStatus;
+import com.gijun.backend.domain.sis.category.ProductType;
+import com.gijun.backend.domain.sis.category.ProductUnit;
+import com.gijun.backend.domain.sis.recipe.RecipeComponent;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -64,7 +69,7 @@ public class Product extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "unit", nullable = false)
-    private ProductUnit unit = ProductUnit.EA;
+    private ProductUnit unit;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type", nullable = false)
@@ -76,18 +81,13 @@ public class Product extends BaseEntity {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
-    // 세트 상품인 경우 구성 상품들
-    @ManyToMany
-    @JoinTable(
-            name = "set_product_items",
-            joinColumns = @JoinColumn(name = "set_product_id"),
-            inverseJoinColumns = @JoinColumn(name = "product_id")
-    )
-    private List<Product> setItems = new ArrayList<>();
-
-    // 레시피 상품인 경우 사용되는 원재료들
+    // Recipe components (for recipe products)
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RecipeIngredient> recipeIngredients = new ArrayList<>();
+    private List<RecipeComponent> recipeComponents = new ArrayList<>();
+
+    // Set product items (for set products)
+    @OneToMany(mappedBy = "setProduct", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SetProductItem> setProductItems = new ArrayList<>();
 
     @Builder
     public Product(String code, String name, String description, Category category,
@@ -103,7 +103,7 @@ public class Product extends BaseEntity {
         this.stock = stock;
         this.minStock = minStock;
         this.maxStock = maxStock;
-        this.status = status;
+        this.status = status != null ? status : ProductStatus.ON_SALE;
         this.isTaxable = isTaxable;
         this.unit = unit != null ? unit : ProductUnit.EA;
         this.productType = productType;
@@ -114,20 +114,21 @@ public class Product extends BaseEntity {
     public void updateStock(int quantity) {
         this.stock += quantity;
         if (this.stock < 0) {
-            throw new IllegalStateException("재고가 부족합니다");
+            throw new IllegalStateException("Stock cannot be negative");
         }
+
+        // Update product status based on stock
         if (this.stock == 0) {
             this.status = ProductStatus.OUT_OF_STOCK;
-        }
-        if (this.stock > 0 && this.status == ProductStatus.OUT_OF_STOCK) {
+        } else if (this.status == ProductStatus.OUT_OF_STOCK) {
             this.status = ProductStatus.ON_SALE;
         }
     }
 
     public void update(String name, String description, Category category,
                        BigDecimal price, BigDecimal costPrice, Integer minStock,
-                       Integer maxStock, ProductUnit unit, ProductType productType,
-                       String barcode, String imageUrl) {
+                       Integer maxStock, ProductUnit unit, ProductStatus status,
+                       ProductType productType, String barcode, String imageUrl) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -136,63 +137,41 @@ public class Product extends BaseEntity {
         if (minStock != null) this.minStock = minStock;
         if (maxStock != null) this.maxStock = maxStock;
         if (unit != null) this.unit = unit;
+        if (status != null) this.status = status;
         if (productType != null) this.productType = productType;
         if (barcode != null) this.barcode = barcode;
         if (imageUrl != null) this.imageUrl = imageUrl;
     }
 
-    public void changeStatus(ProductStatus status) {
-        this.status = status;
-    }
-
-    public boolean isAvailable() {
-        if (status != ProductStatus.ON_SALE) {
-            return false;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-
-        if (saleStartDate != null && now.isBefore(saleStartDate)) {
-            return false;
-        }
-
-        if (saleEndDate != null && now.isAfter(saleEndDate)) {
-            return false;
-        }
-
-        return stock > 0;
-    }
-
-    // 세트 상품 관련 메서드
-    public void addSetItem(Product product) {
-        if (this.productType != ProductType.SET_PRODUCT) {
-            throw new IllegalStateException("세트 상품만 구성 상품을 추가할 수 있습니다");
-        }
-        this.setItems.add(product);
-    }
-
-    public void removeSetItem(Product product) {
-        this.setItems.remove(product);
-    }
-
-    public void clearSetItems() {
-        this.setItems.clear();
-    }
-
-    // 레시피 상품 관련 메서드
-    public void addRecipeIngredient(Product ingredient, int quantity) {
+    public void addRecipeComponent(Product ingredient, int quantity, ProductUnit unit) {
         if (this.productType != ProductType.RECIPE_PRODUCT) {
-            throw new IllegalStateException("레시피 상품만 재료를 추가할 수 있습니다");
+            throw new IllegalStateException("Only recipe products can have recipe components");
         }
-        RecipeIngredient recipeIngredient = new RecipeIngredient(this, ingredient, quantity);
-        this.recipeIngredients.add(recipeIngredient);
+        RecipeComponent component = new RecipeComponent(this, ingredient, quantity, unit);
+        this.recipeComponents.add(component);
     }
 
-    public void removeRecipeIngredient(Product ingredient) {
-        this.recipeIngredients.removeIf(ri -> ri.getIngredient().equals(ingredient));
+    public void removeRecipeComponent(Long ingredientId) {
+        this.recipeComponents.removeIf(component -> component.getIngredient().getId().equals(ingredientId));
     }
 
-    public void clearRecipeIngredients() {
-        this.recipeIngredients.clear();
+    public void clearRecipeComponents() {
+        this.recipeComponents.clear();
+    }
+
+    public void addSetProductItem(Product item, int quantity) {
+        if (this.productType != ProductType.SET_PRODUCT) {
+            throw new IllegalStateException("Only set products can have set product items");
+        }
+        SetProductItem setItem = new SetProductItem(this, item, quantity);
+        this.setProductItems.add(setItem);
+    }
+
+    public void removeSetProductItem(Long itemId) {
+        this.setProductItems.removeIf(item -> item.getItem().getId().equals(itemId));
+    }
+
+    public void clearSetProductItems() {
+        this.setProductItems.clear();
     }
 }

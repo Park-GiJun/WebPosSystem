@@ -1,15 +1,17 @@
-package com.gijun.backend.domain.sis.product;
+package com.gijun.backend.domain.sis.recipe;
 
 import com.gijun.backend.domain.BaseEntity;
+import com.gijun.backend.domain.sis.category.ProductUnit;
+import com.gijun.backend.domain.sis.product.Product;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "recipe_ingredients")
+@Table(name = "recipe_components")
 @Getter
 @NoArgsConstructor
-public class RecipeIngredient extends BaseEntity {
+public class RecipeComponent extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,31 +26,28 @@ public class RecipeIngredient extends BaseEntity {
     private Product ingredient;
 
     @Column(nullable = false)
-    private int quantity;
+    private Integer quantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "unit", nullable = false)
+    @Column(nullable = false)
     private ProductUnit unit;
 
-    public RecipeIngredient(Product product, Product ingredient, int quantity) {
-        this.product = product;
-        this.ingredient = ingredient;
-        this.quantity = quantity;
-        this.unit = ingredient.getUnit();
-    }
-
-    public RecipeIngredient(Product product, Product ingredient, int quantity, ProductUnit unit) {
+    public RecipeComponent(Product product, Product ingredient, Integer quantity, ProductUnit unit) {
         this.product = product;
         this.ingredient = ingredient;
         this.quantity = quantity;
         this.unit = unit;
     }
 
-    public void updateQuantity(int quantity) {
-        this.quantity = quantity;
+    public void updateQuantity(Integer quantity) {
+        if (quantity != null && quantity > 0) {
+            this.quantity = quantity;
+        }
     }
 
     public void updateUnit(ProductUnit unit) {
-        this.unit = unit;
+        if (unit != null) {
+            this.unit = unit;
+        }
     }
 }

@@ -1,4 +1,4 @@
-package com.gijun.backend.domain.sis.product;
+package com.gijun.backend.domain.sis.category;
 
 import com.gijun.backend.domain.BaseEntity;
 import jakarta.persistence.*;
@@ -33,7 +33,7 @@ public class Category extends BaseEntity {
     private List<Category> children = new ArrayList<>();
 
     @Column(nullable = false)
-    private Integer level;
+    private Integer level = 1;
 
     @Column(name = "order_num", nullable = false)
     private Integer orderNum;
@@ -53,6 +53,7 @@ public class Category extends BaseEntity {
         this.orderNum = orderNum;
         this.description = description;
     }
+
     public void updateInfo(String name, Category parent, Integer orderNum, String description) {
         if (name != null) this.name = name;
         if (parent != null && !parent.equals(this.parent)) {
@@ -66,10 +67,10 @@ public class Category extends BaseEntity {
 
     private void validateParent(Category newParent) {
         if (this.equals(newParent)) {
-            throw new IllegalArgumentException("자기 자신을 부모로 설정할 수 없습니다");
+            throw new IllegalArgumentException("Cannot set self as parent");
         }
         if (this.hasChildren() && newParent.isDescendantOf(this)) {
-            throw new IllegalArgumentException("하위 카테고리를 상위 카테고리로 설정할 수 없습니다");
+            throw new IllegalArgumentException("Cannot set a descendant as parent");
         }
     }
 

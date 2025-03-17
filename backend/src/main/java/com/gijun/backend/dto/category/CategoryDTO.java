@@ -1,6 +1,6 @@
-package com.gijun.backend.dto.product;
+package com.gijun.backend.dto.category;
 
-import com.gijun.backend.domain.sis.product.Category;
+import com.gijun.backend.domain.sis.category.Category;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,23 +10,23 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Data
 public class CategoryDTO {
 
     @Data
     public static class CategoryCreateRequest {
-        @NotBlank(message = "카테고리 코드는 필수입니다")
+        @NotBlank(message = "Category code is required")
         @Size(max = 20)
         private String code;
 
-        @NotBlank(message = "카테고리명은 필수입니다")
+        @NotBlank(message = "Category name is required")
         @Size(max = 50)
         private String name;
 
         private Long parentId;
 
-        @NotNull(message = "정렬순서는 필수입니다")
+        @NotNull(message = "Order number is required")
         private Integer orderNum;
 
         @Size(max = 500)
@@ -35,13 +35,13 @@ public class CategoryDTO {
 
     @Data
     public static class CategoryUpdateRequest {
-        @NotBlank(message = "카테고리명은 필수입니다")
+        @NotBlank(message = "Category name is required")
         @Size(max = 50)
         private String name;
 
         private Long parentId;
 
-        @NotNull(message = "정렬순서는 필수입니다")
+        @NotNull(message = "Order number is required")
         private Integer orderNum;
 
         @Size(max = 500)
@@ -76,5 +76,18 @@ public class CategoryDTO {
                     .updatedAt(category.getUpdatedAt())
                     .build();
         }
+    }
+
+    @Data
+    @Builder
+    public static class CategoryHierarchyDTO {
+        private Long id;
+        private String code;
+        private String name;
+        private Integer level;
+        private Integer orderNum;
+        private String description;
+        private Long productCount;
+        private List<CategoryHierarchyDTO> children;
     }
 }

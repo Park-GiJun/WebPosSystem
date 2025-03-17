@@ -1,24 +1,26 @@
 package com.gijun.backend.service.sis.product;
 
-import com.gijun.backend.domain.sis.product.Category;
+import com.gijun.backend.domain.sis.category.Category;
+import com.gijun.backend.domain.sis.category.ProductStatus;
+import com.gijun.backend.domain.sis.category.ProductType;
 import com.gijun.backend.domain.sis.product.Product;
-import com.gijun.backend.domain.sis.product.ProductStatus;
-import com.gijun.backend.dto.kafka.ProductEvent;
+import com.gijun.backend.domain.sis.product.SetProductItem;
+import com.gijun.backend.domain.sis.recipe.RecipeComponent;
 import com.gijun.backend.dto.product.ProductDTO;
-import com.gijun.backend.repository.sis.product.CategoryRepository;
+import com.gijun.backend.repository.sis.category.CategoryRepository;
 import com.gijun.backend.repository.sis.product.ProductRepository;
-import com.gijun.backend.service.KafkaService;
-import jakarta.persistence.EntityNotFoundException;
+import com.gijun.backend.repository.sis.product.SetProductItemRepository;
+import com.gijun.backend.repository.sis.recipe.RecipeComponentRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DuplicateKeyException;
+import org.apache.kafka.common.errors.DuplicateResourceException;
+import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -27,16 +29,17 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
-    private final KafkaService kafkaService;
+    private final RecipeComponentRepository recipeComponentRepository;
+    private final SetProductItemRepository setProductItemRepository;
 
     @Transactional
     public ProductDTO.ProductResponse createProduct(ProductDTO.ProductCreateRequest request) {
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-
         if (productRepository.existsByCodeOrName(request.getCode(), request.getName())) {
-            throw new DuplicateKeyException("Product code or name already exists");
+            throw new DuplicateResourceException("Product code or name already exists");
         }
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         Product product = Product.builder()
                 .code(request.getCode())
@@ -49,37 +52,67 @@ public class ProductService {
                 .minStock(request.getMinStock())
                 .maxStock(request.getMaxStock())
                 .status(ProductStatus.ON_SALE)
-                .unit(request.getUnit())
+                .isTaxable(request.getIsTaxable() != null ? request.getIsTaxable() : true)
+                .unit(request.getUnit() != null ? request.getUnit() : request.getProductType().equals(ProductType.RAW_MATERIAL) ? null : null)
+                .productType(request.getProductType())
+                .barcode(request.getBarcode())
+                .imageUrl(request.getImageUrl())
                 .build();
 
         Product savedProduct = productRepository.save(product);
 
-        // 이벤트 데이터 생성 및 전송
-        ProductEvent event = new ProductEvent("product.created", savedProduct);
-//        kafkaService.sendMessage("product-events", event);
+        if (ProductType.RECIPE_PRODUCT.equals(request.getProductType()) && request.getRecipeComponents() != null) {
+            for (ProductDTO.RecipeComponentRequest componentRequest : request.getRecipeComponents()) {
+                Product ingredient = productRepository.findById(componentRequest.getIngredientId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + componentRequest.getIngredientId()));
 
-        return ProductDTO.ProductResponse.from(savedProduct);
+                RecipeComponent component = new RecipeComponent(
+                        savedProduct,
+                        ingredient,
+                        componentRequest.getQuantity(),
+                        componentRequest.getUnit() != null ? componentRequest.getUnit() : ingredient.getUnit()
+                );
+
+                recipeComponentRepository.save(component);
+            }
+        }
+
+        if (ProductType.SET_PRODUCT.equals(request.getProductType()) && request.getSetProductItems() != null) {
+            for (ProductDTO.SetProductItemRequest itemRequest : request.getSetProductItems()) {
+                Product item = productRepository.findById(itemRequest.getItemId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product item not found: " + itemRequest.getItemId()));
+
+                SetProductItem setItem = new SetProductItem(
+                        savedProduct,
+                        item,
+                        itemRequest.getQuantity()
+                );
+
+                setProductItemRepository.save(setItem);
+            }
+        }
+
+        return getProductResponseById(savedProduct.getId());
     }
+
     public ProductDTO.ProductResponse getProduct(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
-        return ProductDTO.ProductResponse.from(product);
+        return getProductResponseById(id);
     }
 
     public Page<ProductDTO.ProductResponse> getProducts(ProductDTO.ProductSearchRequest request, Pageable pageable) {
-        Page<Product> products;
-
+        Category category = null;
         if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-            products = productRepository.findByCategoryAndStatusOrderByNameAsc(
-                    category, ProductStatus.ON_SALE, pageable);
-        } else if (StringUtils.hasText(request.getKeyword())) {
-            products = productRepository.findByNameContainingAndStatusOrderByNameAsc(
-                    request.getKeyword(), ProductStatus.ON_SALE, pageable);
-        } else {
-            products = productRepository.findAll(pageable);
+            category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         }
+
+        Page<Product> products = productRepository.searchProducts(
+                request.getCategoryId(),
+                request.getStatus(),
+                request.getProductType(),
+                request.getKeyword(),
+                pageable
+        );
 
         return products.map(ProductDTO.ProductResponse::from);
     }
@@ -87,12 +120,12 @@ public class ProductService {
     @Transactional
     public ProductDTO.ProductResponse updateProduct(Long id, ProductDTO.ProductUpdateRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         Category category = null;
         if (request.getCategoryId() != null) {
             category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         }
 
         product.update(
@@ -103,34 +136,92 @@ public class ProductService {
                 request.getCostPrice(),
                 request.getMinStock(),
                 request.getMaxStock(),
-                request.getUnit()
+                request.getUnit(),
+                request.getStatus(),
+                null,
+                request.getBarcode(),
+                request.getImageUrl()
         );
 
-        kafkaService.sendMessage("product-events", "product.updated", product);
-        return ProductDTO.ProductResponse.from(product);
+        if (ProductType.RECIPE_PRODUCT.equals(product.getProductType()) && request.getRecipeComponents() != null) {
+            // Clear existing components
+            recipeComponentRepository.deleteByProduct(product);
+
+            for (ProductDTO.RecipeComponentRequest componentRequest : request.getRecipeComponents()) {
+                Product ingredient = productRepository.findById(componentRequest.getIngredientId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + componentRequest.getIngredientId()));
+
+                RecipeComponent component = new RecipeComponent(
+                        product,
+                        ingredient,
+                        componentRequest.getQuantity(),
+                        componentRequest.getUnit() != null ? componentRequest.getUnit() : ingredient.getUnit()
+                );
+
+                recipeComponentRepository.save(component);
+            }
+        }
+
+        if (ProductType.SET_PRODUCT.equals(product.getProductType()) && request.getSetProductItems() != null) {
+            setProductItemRepository.deleteBySetProduct(product);
+
+            for (ProductDTO.SetProductItemRequest itemRequest : request.getSetProductItems()) {
+                Product item = productRepository.findById(itemRequest.getItemId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product item not found: " + itemRequest.getItemId()));
+
+                SetProductItem setItem = new SetProductItem(
+                        product,
+                        item,
+                        itemRequest.getQuantity()
+                );
+
+                setProductItemRepository.save(setItem);
+            }
+        }
+
+        return getProductResponseById(id);
     }
 
     @Transactional
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
-        product.delete();
-        kafkaService.sendMessage("product-events", "product.deleted", id);
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        productRepository.delete(product);
     }
 
     @Transactional
     public ProductDTO.ProductResponse updateStock(Long id, ProductDTO.StockUpdateRequest request) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         product.updateStock(request.getQuantity());
+        return getProductResponseById(id);
+    }
 
-        Map<String, Object> stockEvent = Map.of(
-                "productId", id,
-                "quantity", request.getQuantity(),
-                "note", request.getNote()
-        );
-        kafkaService.sendMessage("stock-events", "stock.updated", stockEvent);
+    public List<ProductDTO.ProductResponse> getProductsByType(ProductType productType) {
+        List<Product> products = productRepository.findByProductType(productType, Pageable.unpaged()).getContent();
+        List<ProductDTO.ProductResponse> responses = new ArrayList<>();
+
+        for (Product product : products) {
+            responses.add(ProductDTO.ProductResponse.from(product));
+        }
+
+        return responses;
+    }
+
+    private ProductDTO.ProductResponse getProductResponseById(Long id) {
+        Product product;
+
+        if (ProductType.RECIPE_PRODUCT.equals(productRepository.findById(id).get().getProductType())) {
+            product = productRepository.findByIdWithRecipeComponents(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        } else if (ProductType.SET_PRODUCT.equals(productRepository.findById(id).get().getProductType())) {
+            product = productRepository.findByIdWithSetProductItems(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        } else {
+            product = productRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        }
 
         return ProductDTO.ProductResponse.from(product);
     }
