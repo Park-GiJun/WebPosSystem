@@ -83,48 +83,50 @@
                     </label>
                     <button
                         type="button"
-                        @click="addIngredient"
+                        @click="showIngredientModal = true"
                         class="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
                     >
                       + 재료 추가
                     </button>
                   </div>
 
-                  <div class="space-y-2">
+                  <div v-if="form.ingredients.length === 0" class="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                    재료를 추가해주세요
+                  </div>
+
+                  <div v-else class="space-y-2">
                     <div
                         v-for="(ingredient, index) in form.ingredients"
                         :key="index"
-                        class="flex gap-2 items-start"
+                        class="flex gap-2 items-start p-3 bg-gray-50 rounded-lg"
                     >
-                      <input
-                          type="text"
-                          v-model="ingredient.name"
-                          placeholder="재료명"
-                          required
-                          class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                          type="number"
-                          v-model.number="ingredient.amount"
-                          placeholder="수량"
-                          required
-                          min="0"
-                          step="0.1"
-                          class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                      <select
-                          v-model="ingredient.unit"
-                          required
-                          class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="g">g</option>
-                        <option value="ml">ml</option>
-                        <option value="개">개</option>
-                        <option value="컵">컵</option>
-                        <option value="oz">oz</option>
-                        <option value="tbsp">tbsp</option>
-                        <option value="tsp">tsp</option>
-                      </select>
+                      <div class="flex-1">
+                        <p class="font-medium">{{ ingredient.name }}</p>
+                        <div class="flex gap-2 mt-1">
+                          <input
+                              type="number"
+                              v-model.number="ingredient.amount"
+                              placeholder="수량"
+                              required
+                              min="0"
+                              step="0.1"
+                              class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          />
+                          <select
+                              v-model="ingredient.unit"
+                              required
+                              class="w-24 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="개">개</option>
+                            <option value="컵">컵</option>
+                            <option value="oz">oz</option>
+                            <option value="tbsp">tbsp</option>
+                            <option value="tsp">tsp</option>
+                          </select>
+                        </div>
+                      </div>
                       <button
                           type="button"
                           @click="removeIngredient(index)"
@@ -246,10 +248,146 @@
       </div>
     </Dialog>
   </TransitionRoot>
+
+  <!-- Ingredient Selection Modal -->
+  <TransitionRoot appear :show="showIngredientModal" as="template">
+    <Dialog as="div" @close="showIngredientModal = false" class="relative z-50">
+      <TransitionChild
+          enter="duration-300 ease-out"
+          enter-from="opacity-0"
+          enter-to="opacity-100"
+          leave="duration-200 ease-in"
+          leave-from="opacity-100"
+          leave-to="opacity-0"
+      >
+        <div class="fixed inset-0 bg-black/25" />
+      </TransitionChild>
+
+      <div class="fixed inset-0 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+          <TransitionChild
+              enter="duration-300 ease-out"
+              enter-from="opacity-0 scale-95"
+              enter-to="opacity-100 scale-100"
+              leave="duration-200 ease-in"
+              leave-from="opacity-100 scale-100"
+              leave-to="opacity-0 scale-95"
+          >
+            <DialogPanel class="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
+              <div class="flex justify-between items-center mb-4">
+                <DialogTitle class="text-lg font-bold">재료 선택</DialogTitle>
+                <button
+                    type="button"
+                    @click="showIngredientModal = false"
+                    class="text-gray-400 hover:text-gray-500"
+                >
+                  <XIcon class="w-6 h-6" />
+                </button>
+              </div>
+
+              <!-- 검색 필터 -->
+              <div class="mb-4">
+                <div class="relative">
+                  <input
+                      type="text"
+                      v-model="ingredientSearchKeyword"
+                      placeholder="재료명 검색..."
+                      class="w-full px-4 py-2 pr-10 border rounded-lg"
+                  />
+                  <SearchIcon class="w-5 h-5 text-gray-400 absolute right-3 top-2.5" />
+                </div>
+              </div>
+
+              <div v-if="isLoadingIngredients" class="p-4 text-center">
+                <div class="flex justify-center">
+                  <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+                <p class="mt-2 text-gray-600">재료 목록을 불러오는 중...</p>
+              </div>
+
+              <!-- 재료 목록 -->
+              <div v-else class="h-72 overflow-y-auto border rounded-lg">
+                <table class="w-full">
+                  <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">재료명</th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">기본 단위</th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">선택</th>
+                  </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                  <tr v-for="ingredient in filteredIngredients" :key="ingredient.id">
+                    <td class="px-4 py-3">{{ ingredient.name }}</td>
+                    <td class="px-4 py-3">{{ ingredient.unit }}</td>
+                    <td class="px-4 py-3 text-center">
+                      <button
+                          @click="selectIngredient(ingredient)"
+                          class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                      >
+                        선택
+                      </button>
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 선택된 재료 입력 -->
+              <div v-if="selectedIngredient" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-medium mb-3">재료 정보 입력</h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      수량
+                    </label>
+                    <input
+                        type="number"
+                        v-model.number="ingredientAmount"
+                        min="0.1"
+                        step="0.1"
+                        class="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      단위
+                    </label>
+                    <select
+                        v-model="ingredientUnit"
+                        class="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option :value="selectedIngredient.unit">
+                        {{ selectedIngredient.unit }}
+                      </option>
+                      <option value="g">g</option>
+                      <option value="ml">ml</option>
+                      <option value="개">개</option>
+                      <option value="컵">컵</option>
+                      <option value="oz">oz</option>
+                      <option value="tbsp">tbsp</option>
+                      <option value="tsp">tsp</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="flex justify-end mt-4">
+                  <button
+                      @click="addIngredient"
+                      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+            </DialogPanel>
+          </TransitionChild>
+        </div>
+      </div>
+    </Dialog>
+  </TransitionRoot>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import {
   TransitionRoot,
   TransitionChild,
@@ -257,7 +395,9 @@ import {
   DialogPanel,
   DialogTitle,
 } from '@headlessui/vue';
-import { XIcon } from 'lucide-vue-next';
+import { XIcon, SearchIcon } from 'lucide-vue-next';
+import axios from '@/plugins/axios';
+import { useToast } from 'vue-toastification';
 
 const props = defineProps({
   show: Boolean,
@@ -272,8 +412,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'submit']);
+const toast = useToast();
 
-// Form state
+// 폼 상태
 const form = ref({
   name: '',
   categoryId: '',
@@ -287,6 +428,26 @@ const form = ref({
 const errors = ref({});
 const isSubmitting = ref(false);
 
+// 재료 선택 모달 상태
+const showIngredientModal = ref(false);
+const isLoadingIngredients = ref(false);
+const ingredientList = ref([]);
+const ingredientSearchKeyword = ref('');
+const selectedIngredient = ref(null);
+const ingredientAmount = ref(1);
+const ingredientUnit = ref('');
+
+// 재료 목록 필터링
+const filteredIngredients = computed(() => {
+  if (!ingredientSearchKeyword.value) return ingredientList.value;
+
+  const keyword = ingredientSearchKeyword.value.toLowerCase();
+  return ingredientList.value.filter(ing =>
+      ing.name.toLowerCase().includes(keyword)
+  );
+});
+
+// 레시피 폼 초기화
 watch(() => props.recipe, (recipe) => {
   if (recipe) {
     form.value = {
@@ -296,13 +457,13 @@ watch(() => props.recipe, (recipe) => {
       price: recipe.price,
       cookingTime: recipe.cookingTime,
       instructions: recipe.instructions,
-      status: recipe.status
+      status: recipe.status || 'ACTIVE'
     };
   } else {
     form.value = {
       name: '',
       categoryId: '',
-      ingredients: [{ name: '', amount: 0, unit: 'g' }],
+      ingredients: [],
       price: 0,
       cookingTime: 0,
       instructions: '',
@@ -311,6 +472,66 @@ watch(() => props.recipe, (recipe) => {
   }
 }, { immediate: true });
 
+// 재료 관련 메서드
+const fetchIngredients = async () => {
+  try {
+    isLoadingIngredients.value = true;
+    // API 호출하여 원재료(RAW_MATERIAL) 목록 가져오기
+    const response = await axios.get('/products/raw-materials');
+    ingredientList.value = response.data.data || [];
+  } catch (error) {
+    toast.error('재료 목록을 불러오는데 실패했습니다.');
+    console.error('Error fetching ingredients:', error);
+  } finally {
+    isLoadingIngredients.value = false;
+  }
+};
+
+const selectIngredient = (ingredient) => {
+  selectedIngredient.value = ingredient;
+  ingredientUnit.value = ingredient.unit || 'g';
+  ingredientAmount.value = 1;
+};
+
+const addIngredient = () => {
+  if (!selectedIngredient.value || ingredientAmount.value <= 0) {
+    toast.error('유효한 수량을 입력해주세요.');
+    return;
+  }
+
+  // 이미 추가된 재료인지 확인
+  const existingIndex = form.value.ingredients.findIndex(
+      item => item.id === selectedIngredient.value.id
+  );
+
+  if (existingIndex !== -1) {
+    // 이미 있는 재료면 수량 업데이트
+    form.value.ingredients[existingIndex].amount = ingredientAmount.value;
+    form.value.ingredients[existingIndex].unit = ingredientUnit.value;
+    toast.info(`${selectedIngredient.value.name} 수량이 업데이트되었습니다.`);
+  } else {
+    // 새 재료 추가
+    form.value.ingredients.push({
+      id: selectedIngredient.value.id,
+      name: selectedIngredient.value.name,
+      amount: ingredientAmount.value,
+      unit: ingredientUnit.value
+    });
+    toast.success(`${selectedIngredient.value.name}이(가) 추가되었습니다.`);
+  }
+
+  // 재료 선택 상태 초기화
+  selectedIngredient.value = null;
+  showIngredientModal.value = false;
+};
+
+const removeIngredient = (index) => {
+  const ingredientName = form.value.ingredients[index].name;
+  form.value.ingredients.splice(index, 1);
+  toast.info(`${ingredientName}이(가) 제거되었습니다.`);
+};
+
+// 폼 유효성 검사
 const validateForm = () => {
   errors.value = {};
 
@@ -324,14 +545,6 @@ const validateForm = () => {
 
   if (!form.value.ingredients.length) {
     errors.value.ingredients = '최소 1개 이상의 재료가 필요합니다.';
-  }
-
-  const hasEmptyIngredient = form.value.ingredients.some(
-      ing => !ing.name || ing.amount <= 0
-  );
-
-  if (hasEmptyIngredient) {
-    errors.value.ingredients = '모든 재료의 정보를 입력해주세요.';
   }
 
   if (form.value.price < 0) {
@@ -349,16 +562,7 @@ const validateForm = () => {
   return Object.keys(errors.value).length === 0;
 };
 
-const addIngredient = () => {
-  form.value.ingredients.push({ name: '', amount: 0, unit: 'g' });
-};
-
-const removeIngredient = (index) => {
-  if (form.value.ingredients.length > 1) {
-    form.value.ingredients.splice(index, 1);
-  }
-};
-
+// 폼 제출
 const handleSubmit = async () => {
   if (!validateForm()) return;
 
@@ -371,14 +575,16 @@ const handleSubmit = async () => {
       price: Number(form.value.price),
       cookingTime: Number(form.value.cookingTime),
       ingredients: form.value.ingredients.map(ing => ({
-        ...ing,
-        amount: Number(ing.amount)
+        ingredientId: ing.id,
+        quantity: Number(ing.amount),
+        unit: ing.unit
       }))
     };
 
     emit('submit', data);
   } catch (error) {
     console.error('Form submission error:', error);
+    toast.error('레시피 저장에 실패했습니다.');
   } finally {
     isSubmitting.value = false;
   }
@@ -387,4 +593,18 @@ const handleSubmit = async () => {
 const onClose = () => {
   emit('close');
 };
+
+// 모달이 열릴 때 재료 목록 로드
+watch(() => props.show, (show) => {
+  if (show) {
+    fetchIngredients();
+  }
+});
+
+// 초기 로드
+onMounted(() => {
+  if (props.show) {
+    fetchIngredients();
+  }
+});
 </script>

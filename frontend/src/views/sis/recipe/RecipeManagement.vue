@@ -1,4 +1,4 @@
-<!-- Recipe.vue -->
+<!-- RecipeManagement.vue -->
 <template>
   <div class="p-6">
     <!-- Header -->
@@ -74,12 +74,25 @@
 
     <!-- Recipe List -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="w-full">
+      <div v-if="isLoading" class="p-6 text-center">
+        <div class="flex justify-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+        <p class="mt-4 text-gray-600">레시피 목록을 불러오는 중...</p>
+      </div>
+
+      <div v-else-if="recipes.length === 0" class="p-6 text-center">
+        <p class="text-gray-600">등록된 레시피가 없습니다.</p>
+      </div>
+
+      <table v-else class="w-full">
         <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">레시피명</th>
+          <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">카테고리</th>
           <th class="px-6 py-3 text-left text-sm font-medium text-gray-500">재료</th>
           <th class="px-6 py-3 text-right text-sm font-medium text-gray-500">가격</th>
+          <th class="px-6 py-3 text-center text-sm font-medium text-gray-500">조리시간</th>
           <th class="px-6 py-3 text-center text-sm font-medium text-gray-500">상태</th>
           <th class="px-6 py-3 text-center text-sm font-medium text-gray-500">관리</th>
         </tr>
@@ -87,21 +100,32 @@
         <tbody class="divide-y divide-gray-200">
         <tr v-for="recipe in recipes" :key="recipe.id">
           <td class="px-6 py-4">{{ recipe.name }}</td>
+          <td class="px-6 py-4">{{ recipe.category.name }}</td>
           <td class="px-6 py-4">
-              <span v-for="(ingredient, index) in recipe.ingredients" :key="index" class="inline-block px-2 py-1 bg-gray-100 rounded-full text-sm mr-1 mb-1">
-                {{ ingredient.name }} ({{ ingredient.amount }}{{ ingredient.unit }})
+            <div class="flex flex-wrap gap-1">
+              <span
+                  v-for="(component, index) in recipe.recipeComponents"
+                  :key="index"
+                  class="inline-block px-2 py-1 bg-gray-100 rounded-full text-xs"
+              >
+                {{ component.ingredient.name }} ({{ component.quantity }}{{ component.unit }})
               </span>
+              <span v-if="recipe.recipeComponents && recipe.recipeComponents.length > 3" class="inline-block px-2 py-1 text-xs text-gray-500">
+                외 {{ recipe.recipeComponents.length - 3 }}개
+              </span>
+            </div>
           </td>
           <td class="px-6 py-4 text-right">{{ formatPrice(recipe.price) }}</td>
-          <td class="px-6 py-4">
-              <span
-                  :class="[
-                  'px-2 py-1 rounded-full text-xs font-medium',
-                  recipe.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                ]"
-              >
-                {{ recipe.status === 'ACTIVE' ? '활성' : '비활성' }}
-              </span>
+          <td class="px-6 py-4 text-center">{{ recipe.cookingTime || '-' }} 분</td>
+          <td class="px-6 py-4 text-center">
+            <span
+                :class="[
+                'px-2 py-1 rounded-full text-xs font-medium',
+                recipe.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              ]"
+            >
+              {{ recipe.status === 'ACTIVE' ? '활성' : '비활성' }}
+            </span>
           </td>
           <td class="px-6 py-4">
             <div class="flex justify-center gap-2">
@@ -112,7 +136,7 @@
                 <PencilIcon class="w-4 h-4" />
               </button>
               <button
-                  @click="deleteRecipe(recipe.id)"
+                  @click="confirmDeleteRecipe(recipe)"
                   class="p-1 text-red-600 hover:bg-red-50 rounded"
               >
                 <TrashIcon class="w-4 h-4" />
@@ -124,7 +148,6 @@
       </table>
 
       <!-- Pagination -->
-      <!-- Pagination 부분 수정 -->
       <div class="flex justify-between items-center px-6 py-4 border-t">
         <div class="text-sm text-gray-500">
           총 {{ totalCount }}개 레시피
@@ -135,110 +158,138 @@
               :key="pageNum"
               @click="currentPage = pageNum"
               :class="[
-          'px-3 py-1 rounded',
-          currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-100'
-        ]"
+                'px-3 py-1 rounded',
+                currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-100'
+              ]"
           >
             {{ pageNum }}
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Recipe Modal -->
+    <RecipeModal
+        v-if="showRecipeModal"
+        :show="showRecipeModal"
+        :recipe="editingRecipe"
+        :categories="categories"
+        @close="closeRecipeModal"
+        @submit="handleRecipeSubmit"
+    />
+
+    <!-- Confirm Delete Modal -->
+    <BaseModal
+        v-model="showDeleteModal"
+        title="레시피 삭제"
+    >
+      <div class="p-4">
+        <p>정말 "<span class="font-semibold">{{ recipeToDelete?.name }}</span>" 레시피를 삭제하시겠습니까?</p>
+        <p class="mt-2 text-sm text-gray-500">이 작업은 되돌릴 수 없습니다.</p>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <button
+              @click="showDeleteModal = false"
+              class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+          >
+            취소
+          </button>
+          <button
+              @click="deleteRecipe"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
-
-  <!-- Recipe Modal -->
-  <RecipeModal
-      v-if="showRecipeModal"
-      :show="showRecipeModal"
-      :recipe="editingRecipe"
-      :categories="categories"
-      @close="closeRecipeModal"
-      @submit="handleRecipeSubmit"
-  />
-
-  <!-- 재료 선택 모달 -->
-  <IngredientModal
-      v-if="showIngredientModal"
-      :show="showIngredientModal"
-      :ingredients="availableIngredients"
-      @close="showIngredientModal = false"
-      @select="handleIngredientSelect"
-  />
 </template>
 
 <script setup>
-import {ref, computed, onMounted, watch} from 'vue';
-import axios from "@/plugins/axios.js";
+import { ref, computed, onMounted, watch } from 'vue';
 import { PlusIcon, PencilIcon, TrashIcon, SearchIcon } from 'lucide-vue-next';
 import RecipeModal from '@/components/recipe/RecipeModal.vue';
-import IngredientsModal from "@/components/recipe/IngredientsModal.vue";
+import BaseModal from '@/components/base/BaseModal.vue';
 import { useToast } from 'vue-toastification';
+import axios from '@/plugins/axios';
 
 const toast = useToast();
 
 // State
+const isLoading = ref(false);
 const recipes = ref([]);
 const categories = ref([]);
 const totalCount = ref(0);
 const currentPage = ref(1);
+const pageSize = ref(10);
 const searchParams = ref({
   categoryId: '',
   status: '',
   keyword: ''
 });
+
 const showRecipeModal = ref(false);
+const showDeleteModal = ref(false);
 const editingRecipe = ref(null);
-const pageSize = 10; // 페이지당 항목 수 명시적 정의
-const showIngredientModal = ref(false);
-
-// 재료 선택 핸들러
-const handleIngredientSelect = (ingredient) => {
-  form.value.ingredients.push(ingredient);
-  showIngredientModal.value = false;
-};
-
-const availableIngredients = ref([
-  {
-    id: 1,
-    name: '우유',
-    unit: 'ml',
-    unitPrice: 4
-  },
-  {
-    id: 2,
-    name: '원두',
-    unit: 'g',
-    unitPrice: 50
-  },
-  // ... 더 많은 재료들
-]);
-
+const recipeToDelete = ref(null);
 
 // Computed
-const totalPages = computed(() => Math.ceil(totalCount.value / 10));
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value));
+const pageNumbers = computed(() => {
+  if (totalPages.value <= 5) {
+    return Array.from({ length: totalPages.value }, (_, i) => i + 1);
+  }
+
+  const current = currentPage.value;
+  if (current <= 3) {
+    return [1, 2, 3, 4, 5];
+  }
+  if (current >= totalPages.value - 2) {
+    return Array.from({ length: 5 }, (_, i) => totalPages.value - 4 + i);
+  }
+  return [current - 2, current - 1, current, current + 1, current + 2];
+});
 
 // Methods
 const fetchRecipes = async () => {
   try {
-    const response = await axios.get('/recipes', {
+    isLoading.value = true;
+
+    const params = {
+      page: currentPage.value - 1,
+      size: pageSize.value,
+      ...searchParams.value
+    };
+
+    // API 경로: 상품이면서 타입이 RECIPE_PRODUCT인 상품을 조회
+    const response = await axios.get('/products', {
       params: {
-        page: currentPage.value,
-        size: 10,
-        ...searchParams.value
+        ...params,
+        productType: 'RECIPE_PRODUCT'
       }
     });
-    recipes.value = response.data.content;
-    totalCount.value = response.data.totalElements;
+
+    if (response.data && response.data.data) {
+      recipes.value = response.data.data.content || [];
+      totalCount.value = response.data.data.totalElements || 0;
+    }
   } catch (error) {
+    console.error('Failed to fetch recipes:', error);
     toast.error('레시피 목록을 불러오는데 실패했습니다.');
+  } finally {
+    isLoading.value = false;
   }
 };
 
 const fetchCategories = async () => {
   try {
     const response = await axios.get('/categories');
-    categories.value = response.data;
+    if (response.data && response.data.data) {
+      categories.value = response.data.data.content || [];
+    }
   } catch (error) {
+    console.error('Failed to fetch categories:', error);
     toast.error('카테고리 목록을 불러오는데 실패했습니다.');
   }
 };
@@ -248,30 +299,64 @@ const editRecipe = (recipe) => {
   showRecipeModal.value = true;
 };
 
-const deleteRecipe = async (id) => {
-  if (!confirm('정말 삭제하시겠습니까?')) return;
+const confirmDeleteRecipe = (recipe) => {
+  recipeToDelete.value = recipe;
+  showDeleteModal.value = true;
+};
+
+const deleteRecipe = async () => {
+  if (!recipeToDelete.value) return;
 
   try {
-    await axios.delete(`/recipes/${id}`);
-    toast.success('레시피가 삭제되었습니다.');
-    await fetchRecipes();
+    await axios.delete(`/products/${recipeToDelete.value.id}`);
+    toast.success('레시피가 성공적으로 삭제되었습니다.');
+    fetchRecipes();
+    showDeleteModal.value = false;
+    recipeToDelete.value = null;
   } catch (error) {
+    console.error('Failed to delete recipe:', error);
     toast.error('레시피 삭제에 실패했습니다.');
   }
 };
 
 const handleRecipeSubmit = async (data) => {
   try {
+    // 레시피 데이터 가공 - ProductDTO.ProductCreateRequest 또는 ProductUpdateRequest 형식으로 맞춤
+    const productData = {
+      name: data.name,
+      categoryId: data.categoryId,
+      description: data.instructions,
+      price: data.price,
+      costPrice: 0, // 비용은 재료의 합이나 기본값
+      status: data.status,
+      productType: 'RECIPE_PRODUCT',
+      // RecipeComponent에 대한 데이터 매핑
+      recipeComponents: data.ingredients.map(ing => ({
+        ingredientId: ing.ingredientId,
+        quantity: ing.amount,
+        unit: ing.unit
+      }))
+    };
+
     if (editingRecipe.value) {
-      await axios.put(`/recipes/${editingRecipe.value.id}`, data);
-      toast.success('레시피가 수정되었습니다.');
+      // 기존 레시피 수정
+      await axios.put(`/products/${editingRecipe.value.id}`, { data: productData });
+      toast.success('레시피가 성공적으로 수정되었습니다.');
     } else {
-      await axios.post('/recipes', data);
-      toast.success('레시피가 등록되었습니다.');
+      // 신규 레시피 등록 - 필요한 추가 필드
+      productData.code = `RECIPE_${Date.now()}`;  // 임시 상품 코드 생성
+      productData.stock = 0;  // 재고는 재료로 계산되거나 기본값 사용
+      productData.minStock = 0;
+      productData.isTaxable = true;
+
+      await axios.post('/products', { data: productData });
+      toast.success('레시피가 성공적으로 등록되었습니다.');
     }
+
     closeRecipeModal();
-    await fetchRecipes();
+    fetchRecipes();
   } catch (error) {
+    console.error('Failed to save recipe:', error);
     toast.error(error.response?.data?.message || '레시피 저장에 실패했습니다.');
   }
 };
@@ -282,7 +367,7 @@ const closeRecipeModal = () => {
 };
 
 const formatPrice = (price) => {
-  return `₩${price.toLocaleString()}`;
+  return price ? `₩${Number(price).toLocaleString()}` : '₩0';
 };
 
 // Watch

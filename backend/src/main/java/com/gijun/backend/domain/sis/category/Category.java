@@ -1,6 +1,7 @@
 package com.gijun.backend.domain.sis.category;
 
 import com.gijun.backend.domain.BaseEntity;
+import com.gijun.backend.domain.sis.product.Product;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
