@@ -8,8 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-// Product.java
 @Entity
 @Table(name = "products")
 @Getter
@@ -26,17 +27,17 @@ public class Product extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, length = 500)
+    @Column(length = 500)
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "cost_price", nullable = false)
+    @Column(name = "cost_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal costPrice;
 
     @Column(nullable = false)
@@ -53,7 +54,7 @@ public class Product extends BaseEntity {
     private ProductStatus status;
 
     @Column(name = "is_taxable", nullable = false)
-    private boolean isTaxable = true;  // default value
+    private boolean isTaxable = true;
 
     @Column(name = "sale_start_date")
     private LocalDateTime saleStartDate;
@@ -63,12 +64,36 @@ public class Product extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "unit", nullable = false)
-    private ProductUnit unit = ProductUnit.EA;  // 기본값을 EA로 설정
+    private ProductUnit unit = ProductUnit.EA;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "product_type", nullable = false)
+    private ProductType productType;
+
+    @Column(name = "barcode", length = 30)
+    private String barcode;
+
+    @Column(name = "image_url", length = 255)
+    private String imageUrl;
+
+    // 세트 상품인 경우 구성 상품들
+    @ManyToMany
+    @JoinTable(
+            name = "set_product_items",
+            joinColumns = @JoinColumn(name = "set_product_id"),
+            inverseJoinColumns = @JoinColumn(name = "product_id")
+    )
+    private List<Product> setItems = new ArrayList<>();
+
+    // 레시피 상품인 경우 사용되는 원재료들
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RecipeIngredient> recipeIngredients = new ArrayList<>();
 
     @Builder
     public Product(String code, String name, String description, Category category,
                    BigDecimal price, BigDecimal costPrice, Integer stock, Integer minStock,
-                   Integer maxStock, ProductStatus status, boolean isTaxable, ProductUnit unit) {
+                   Integer maxStock, ProductStatus status, boolean isTaxable, ProductUnit unit,
+                   ProductType productType, String barcode, String imageUrl) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -81,6 +106,9 @@ public class Product extends BaseEntity {
         this.status = status;
         this.isTaxable = isTaxable;
         this.unit = unit != null ? unit : ProductUnit.EA;
+        this.productType = productType;
+        this.barcode = barcode;
+        this.imageUrl = imageUrl;
     }
 
     public void updateStock(int quantity) {
@@ -98,7 +126,8 @@ public class Product extends BaseEntity {
 
     public void update(String name, String description, Category category,
                        BigDecimal price, BigDecimal costPrice, Integer minStock,
-                       Integer maxStock, ProductUnit unit) {
+                       Integer maxStock, ProductUnit unit, ProductType productType,
+                       String barcode, String imageUrl) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -107,8 +136,10 @@ public class Product extends BaseEntity {
         if (minStock != null) this.minStock = minStock;
         if (maxStock != null) this.maxStock = maxStock;
         if (unit != null) this.unit = unit;
+        if (productType != null) this.productType = productType;
+        if (barcode != null) this.barcode = barcode;
+        if (imageUrl != null) this.imageUrl = imageUrl;
     }
-
 
     public void changeStatus(ProductStatus status) {
         this.status = status;
@@ -130,5 +161,38 @@ public class Product extends BaseEntity {
         }
 
         return stock > 0;
+    }
+
+    // 세트 상품 관련 메서드
+    public void addSetItem(Product product) {
+        if (this.productType != ProductType.SET_PRODUCT) {
+            throw new IllegalStateException("세트 상품만 구성 상품을 추가할 수 있습니다");
+        }
+        this.setItems.add(product);
+    }
+
+    public void removeSetItem(Product product) {
+        this.setItems.remove(product);
+    }
+
+    public void clearSetItems() {
+        this.setItems.clear();
+    }
+
+    // 레시피 상품 관련 메서드
+    public void addRecipeIngredient(Product ingredient, int quantity) {
+        if (this.productType != ProductType.RECIPE_PRODUCT) {
+            throw new IllegalStateException("레시피 상품만 재료를 추가할 수 있습니다");
+        }
+        RecipeIngredient recipeIngredient = new RecipeIngredient(this, ingredient, quantity);
+        this.recipeIngredients.add(recipeIngredient);
+    }
+
+    public void removeRecipeIngredient(Product ingredient) {
+        this.recipeIngredients.removeIf(ri -> ri.getIngredient().equals(ingredient));
+    }
+
+    public void clearRecipeIngredients() {
+        this.recipeIngredients.clear();
     }
 }
