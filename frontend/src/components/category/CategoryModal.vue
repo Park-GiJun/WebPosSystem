@@ -23,28 +23,48 @@
               leave-from="opacity-100 scale-100"
               leave-to="opacity-0 scale-95"
           >
-            <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
-              <DialogTitle class="text-lg font-medium leading-6 text-gray-900 mb-4">
-                {{ editingCategory ? '카테고리 수정' : '카테고리 추가' }}
+            <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-xl bg-white p-6 shadow-xl">
+              <DialogTitle class="text-lg font-bold mb-4">
+                {{ isEditing ? '카테고리 수정' : '카테고리 등록' }}
               </DialogTitle>
 
               <form @submit.prevent="handleSubmit" class="space-y-4">
-                <!-- 카테고리 코드 -->
-                <div v-if="!editingCategory">
+                <!-- 신규 등록시에만 카테고리 코드 입력 가능 -->
+                <div v-if="!isEditing">
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    카테고리 코드
-                    <span class="text-red-500">*</span>
+                    카테고리 코드 <span class="text-red-500">*</span>
                   </label>
                   <input
                       type="text"
                       v-model="form.code"
                       required
                       maxlength="20"
-                      class="w-full px-4 py-2 border rounded-lg"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                       :class="{'border-red-500': errors.code}"
                   />
                   <p v-if="errors.code" class="mt-1 text-sm text-red-500">
                     {{ errors.code }}
+                  </p>
+                  <p class="mt-1 text-xs text-gray-500">
+                    * 코드는 영문, 숫자만 입력 가능하며 최대 20자까지 입력할 수 있습니다.
+                  </p>
+                </div>
+
+                <!-- 카테고리 이름 -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    카테고리명 <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                      type="text"
+                      v-model="form.name"
+                      required
+                      maxlength="50"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.name}"
+                  />
+                  <p v-if="errors.name" class="mt-1 text-sm text-red-500">
+                    {{ errors.name }}
                   </p>
                 </div>
 
@@ -55,43 +75,41 @@
                   </label>
                   <select
                       v-model="form.parentId"
-                      class="w-full px-4 py-2 border rounded-lg"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">없음</option>
+                    <option :value="null">없음 (최상위 카테고리)</option>
                     <option
-                        v-for="category in availableCategories"
+                        v-for="category in availableParentCategories"
                         :key="category.id"
                         :value="category.id"
                     >
                       {{ category.name }}
                     </option>
                   </select>
-                </div>
-
-                <!-- 카테고리명 -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">
-                    카테고리명
-                    <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                      type="text"
-                      v-model="form.name"
-                      required
-                      class="w-full px-4 py-2 border rounded-lg"
-                  />
+                  <p v-if="errors.parentId" class="mt-1 text-sm text-red-500">
+                    {{ errors.parentId }}
+                  </p>
                 </div>
 
                 <!-- 정렬 순서 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
-                    정렬 순서
+                    정렬 순서 <span class="text-red-500">*</span>
                   </label>
                   <input
                       type="number"
-                      v-model="form.orderNum"
-                      class="w-full px-4 py-2 border rounded-lg"
+                      v-model.number="form.orderNum"
+                      required
+                      min="1"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      :class="{'border-red-500': errors.orderNum}"
                   />
+                  <p v-if="errors.orderNum" class="mt-1 text-sm text-red-500">
+                    {{ errors.orderNum }}
+                  </p>
+                  <p class="mt-1 text-xs text-gray-500">
+                    * 숫자가 작을수록 먼저 표시됩니다.
+                  </p>
                 </div>
 
                 <!-- 설명 -->
@@ -102,8 +120,12 @@
                   <textarea
                       v-model="form.description"
                       rows="3"
-                      class="w-full px-4 py-2 border rounded-lg"
+                      maxlength="500"
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   ></textarea>
+                  <p class="mt-1 text-xs text-gray-500">
+                    최대 500자까지 입력할 수 있습니다.
+                  </p>
                 </div>
 
                 <!-- 버튼 영역 -->
@@ -133,131 +155,142 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue';
 import {
   TransitionRoot,
   TransitionChild,
   Dialog,
   DialogPanel,
   DialogTitle,
-} from '@headlessui/vue'
-import axios from '@/plugins/axios'
-import { useToast } from 'vue-toastification'
+} from '@headlessui/vue';
 
 const props = defineProps({
-  show: Boolean,
+  show: {
+    type: Boolean,
+    required: true
+  },
+  category: {
+    type: Object,
+    default: null
+  },
   categories: {
     type: Array,
     default: () => []
-  },
-  editingCategory: {
-    type: Object,
-    default: null
   }
-})
+});
 
-const emit = defineEmits(['update:show', 'refresh'])
-const toast = useToast()
+const emit = defineEmits(['update:show', 'submit']);
 
+// 상태 관리
 const form = ref({
-  code: '',       // 추가: 카테고리 코드
+  code: '',
   name: '',
-  parentId: '',
-  orderNum: 0,
+  parentId: null,
+  orderNum: 1,
   description: ''
-})
+});
 
-const isSubmitting = ref(false)
+const errors = ref({});
+const isSubmitting = ref(false);
 
-// 사용 가능한 상위 카테고리 목록 (현재 카테고리와 그 하위 카테고리들 제외)
-const availableCategories = computed(() => {
-  if (!props.editingCategory) return props.categories
-  return props.categories.filter(cat =>
-      cat.id !== props.editingCategory.id
-  )
-})
+// 계산된 속성
+const isEditing = computed(() => !!props.category);
 
-// 편집 모드일 때 폼 초기화
-watch(() => props.editingCategory, (category) => {
-  if (category) {
+const availableParentCategories = computed(() => {
+  // 현재 카테고리를 제외한 가능한 상위 카테고리 목록
+  if (!props.category) return props.categories;
+
+  return props.categories.filter(category =>
+      category.id !== props.category.id
+  );
+});
+
+// 카테고리 데이터가 변경될 때 폼 초기화
+watch(() => props.category, (newCategory) => {
+  if (newCategory) {
     form.value = {
-      parentId: category.parentId || '',
-      name: category.name,
-      orderNum: category.orderNum,
-      description: category.description
-    }
+      code: newCategory.code || '',
+      name: newCategory.name || '',
+      parentId: newCategory.parentId || null,
+      orderNum: newCategory.orderNum || 1,
+      description: newCategory.description || ''
+    };
+  } else {
+    form.value = {
+      code: '',
+      name: '',
+      parentId: null,
+      orderNum: 1,
+      description: ''
+    };
   }
-}, { immediate: true })
+}, { immediate: true });
 
-const errors = ref({})
-
+// 폼 유효성 검사
 const validateForm = () => {
-  errors.value = {}
+  errors.value = {};
 
-  if (!form.value.code && !props.editingCategory) {
-    errors.value.code = '카테고리 코드는 필수입니다'
+  // 카테고리 코드 유효성 검사
+  if (!isEditing.value && !form.value.code) {
+    errors.value.code = '카테고리 코드는 필수입니다.';
+  } else if (!isEditing.value && !/^[A-Za-z0-9_-]+$/.test(form.value.code)) {
+    errors.value.code = '카테고리 코드는 영문, 숫자, 대시(-), 언더스코어(_)만 사용할 수 있습니다.';
   }
 
+  // 카테고리명 유효성 검사
   if (!form.value.name) {
-    errors.value.name = '카테고리명은 필수입니다'
+    errors.value.name = '카테고리명은 필수입니다.';
   }
 
-  if (form.value.orderNum === undefined || form.value.orderNum === null) {
-    errors.value.orderNum = '정렬순서는 필수입니다'
+  // 정렬 순서 유효성 검사
+  if (!form.value.orderNum || form.value.orderNum < 1) {
+    errors.value.orderNum = '정렬 순서는 1 이상이어야 합니다.';
   }
 
-  return Object.keys(errors.value).length === 0
-}
+  // 순환 참조 방지 (자기 자신을 부모로 설정하는 경우)
+  if (props.category && form.value.parentId === props.category.id) {
+    errors.value.parentId = '자기 자신을 상위 카테고리로 설정할 수 없습니다.';
+  }
 
+  return Object.keys(errors.value).length === 0;
+};
+
+// 폼 제출 처리
 const handleSubmit = async () => {
+  if (!validateForm()) return;
+
   try {
-    if (!validateForm()) return
+    isSubmitting.value = true;
 
-    isSubmitting.value = true
+    // 제출할 데이터 구성
+    const submitData = {
+      name: form.value.name,
+      orderNum: form.value.orderNum,
+      description: form.value.description || null,
+    };
 
-    const data = props.editingCategory
-        ? {
-          name: form.value.name,
-          parentId: form.value.parentId || null,
-          orderNum: form.value.orderNum,
-          description: form.value.description
-        }
-        : {
-          code: form.value.code,
-          name: form.value.name,
-          parentId: form.value.parentId || null,
-          orderNum: form.value.orderNum,
-          description: form.value.description
-        }
-
-    if (props.editingCategory) {
-      await axios.put(`/categories/${props.editingCategory.id}`, { data })
-      toast.success('카테고리가 수정되었습니다')
-    } else {
-      await axios.post('/categories', { data })
-      toast.success('카테고리가 추가되었습니다')
+    // 상위 카테고리가 있는 경우에만 추가
+    if (form.value.parentId) {
+      submitData.parentId = form.value.parentId;
     }
 
-    emit('refresh')
-    onClose()
+    // 신규 등록 시 코드 추가
+    if (!isEditing.value) {
+      submitData.code = form.value.code;
+    }
+
+    // 부모 컴포넌트에 제출 이벤트 전달
+    emit('submit', submitData);
   } catch (error) {
-    if (error.response?.data?.errors) {
-      errors.value = error.response.data.errors
-    } else {
-      toast.error('카테고리 저장에 실패했습니다')
-    }
+    console.error('Form submission error:', error);
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
-}
+};
 
+// 모달 닫기
 const onClose = () => {
-  emit('update:show', false)
-  form.value = {
-    parentId: '',
-    name: '',
-    orderNum: 0,
-    description: ''
-  }
-}
+  emit('update:show', false);
+  errors.value = {};
+};
 </script>

@@ -25,7 +25,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    @Operation(summary = "Create Category")
+    @Operation(summary = "카테고리 생성")
     public ResponseEntity<CommonResponseDto<CategoryDTO.CategoryResponse>> createCategory(
             @Valid @RequestBody CommonRequestDto<CategoryDTO.CategoryCreateRequest> request) {
         CategoryDTO.CategoryResponse response = categoryService.createCategory(request.getData());
@@ -33,7 +33,7 @@ public class CategoryController {
     }
 
     @GetMapping
-    @Operation(summary = "Get Category List")
+    @Operation(summary = "카테고리 리스트")
     public ResponseEntity<CommonResponseDto<Page<CategoryDTO.CategoryResponse>>> getCategories(
             @PageableDefault(size = 20, sort = "orderNum") Pageable pageable) {
         Page<CategoryDTO.CategoryResponse> response = categoryService.getCategories(pageable);
@@ -41,14 +41,14 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}/subcategories")
-    @Operation(summary = "Get Subcategory List")
+    @Operation(summary = "서브 카테고리 목록")
     public ResponseEntity<CommonResponseDto<List<CategoryDTO.CategoryResponse>>> getSubcategories(@PathVariable Long id) {
         List<CategoryDTO.CategoryResponse> response = categoryService.getSubcategories(id);
         return ResponseEntity.ok(CommonResponseDto.success(response));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update Category")
+    @Operation(summary = "카테고리 업데이트")
     public ResponseEntity<CommonResponseDto<CategoryDTO.CategoryResponse>> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CommonRequestDto<CategoryDTO.CategoryUpdateRequest> request) {
@@ -57,14 +57,14 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Category")
+    @Operation(summary = "카테고리 삭제")
     public ResponseEntity<CommonResponseDto<Void>> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ResponseEntity.ok(CommonResponseDto.success(null, "Category deleted successfully"));
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search Categories")
+    @Operation(summary = "카테고리 검색")
     public ResponseEntity<CommonResponseDto<List<CategoryDTO.CategoryResponse>>> searchCategories(
             @RequestParam String keyword) {
         List<CategoryDTO.CategoryResponse> response = categoryService.searchCategories(keyword);

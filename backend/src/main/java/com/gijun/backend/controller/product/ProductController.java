@@ -29,7 +29,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    @Operation(summary = "Create Product")
+    @Operation(summary = "상품 생성")
     public ResponseEntity<CommonResponseDto<ProductDTO.ProductResponse>> createProduct(
             @Valid @RequestBody CommonRequestDto<ProductDTO.ProductCreateRequest> request) {
         ProductDTO.ProductResponse response = productService.createProduct(request.getData());
@@ -37,14 +37,14 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Product Detail")
+    @Operation(summary = "상품 조회")
     public ResponseEntity<CommonResponseDto<ProductDTO.ProductResponse>> getProduct(@PathVariable Long id) {
         ProductDTO.ProductResponse response = productService.getProduct(id);
         return ResponseEntity.ok(CommonResponseDto.success(response));
     }
 
     @GetMapping
-    @Operation(summary = "Get Product List")
+    @Operation(summary = "상품 목록")
     public ResponseEntity<CommonResponseDto<Page<ProductDTO.ProductResponse>>> getProducts(
             @ModelAttribute ProductDTO.ProductSearchRequest searchRequest,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
@@ -53,7 +53,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update Product")
+    @Operation(summary = "상품 업데이트")
     public ResponseEntity<CommonResponseDto<ProductDTO.ProductResponse>> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody CommonRequestDto<ProductDTO.ProductUpdateRequest> request) {
@@ -62,7 +62,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}/stock")
-    @Operation(summary = "Update Product Stock")
+    @Operation(summary = "상품 재고 업데이트")
     public ResponseEntity<CommonResponseDto<ProductDTO.ProductResponse>> updateStock(
             @PathVariable Long id,
             @Valid @RequestBody CommonRequestDto<ProductDTO.StockUpdateRequest> request) {
@@ -71,14 +71,14 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Product")
+    @Operation(summary = "상품 삭제")
     public ResponseEntity<CommonResponseDto<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok(CommonResponseDto.success(null, "Product deleted successfully"));
     }
 
     @GetMapping("/types/{type}")
-    @Operation(summary = "Get Products by Type")
+    @Operation(summary = "타입별 상품")
     public ResponseEntity<CommonResponseDto<List<ProductDTO.ProductResponse>>> getProductsByType(
             @PathVariable ProductType type) {
         List<ProductDTO.ProductResponse> responses = productService.getProductsByType(type);
@@ -86,21 +86,21 @@ public class ProductController {
     }
 
     @GetMapping("/raw-materials")
-    @Operation(summary = "Get Raw Materials")
+    @Operation(summary = "원재료 검색")
     public ResponseEntity<CommonResponseDto<List<ProductDTO.ProductResponse>>> getRawMaterials() {
         List<ProductDTO.ProductResponse> responses = productService.getProductsByType(ProductType.RAW_MATERIAL);
         return ResponseEntity.ok(CommonResponseDto.success(responses));
     }
 
     @GetMapping("/recipe-products")
-    @Operation(summary = "Get Recipe Products")
+    @Operation(summary = "레시피 상품")
     public ResponseEntity<CommonResponseDto<List<ProductDTO.ProductResponse>>> getRecipeProducts() {
         List<ProductDTO.ProductResponse> responses = productService.getProductsByType(ProductType.RECIPE_PRODUCT);
         return ResponseEntity.ok(CommonResponseDto.success(responses));
     }
 
     @GetMapping("/set-products")
-    @Operation(summary = "Get Set Products")
+    @Operation(summary = "세트 상품")
     public ResponseEntity<CommonResponseDto<List<ProductDTO.ProductResponse>>> getSetProducts() {
         List<ProductDTO.ProductResponse> responses = productService.getProductsByType(ProductType.SET_PRODUCT);
         return ResponseEntity.ok(CommonResponseDto.success(responses));
