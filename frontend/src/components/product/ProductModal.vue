@@ -90,22 +90,49 @@
                 </div>
 
                 <!-- 카테고리 -->
+                <!-- 카테고리 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
                     카테고리
                     <span class="text-red-500">*</span>
                   </label>
-                  <select
-                      v-model="form.categoryId"
-                      required
-                      class="w-full px-4 py-2 border rounded-lg"
-                      :class="{'border-red-500': errors.categoryId}"
-                  >
-                    <option value="">카테고리 선택</option>
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
-                      {{ category.name }}
-                    </option>
-                  </select>
+                  <div class="w-full">
+                    <Popover v-slot="{ open }" class="relative">
+                      <PopoverButton
+                          class="w-full px-4 py-2 border rounded-lg text-left flex justify-between items-center"
+                          :class="{'border-red-500': errors.categoryId}"
+                      >
+                        {{ selectedCategoryName || '카테고리 선택' }}
+                        <ChevronDown class="w-4 h-4" />
+                      </PopoverButton>
+
+                      <PopoverPanel
+                          class="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                      >
+                        <div class="p-2">
+                          <div
+                              v-for="parentCategory in categoriesTree"
+                              :key="parentCategory.id"
+                              class="mb-2"
+                          >
+                            <div
+                                class="font-semibold text-gray-700 mb-1 border-b pb-1"
+                            >
+                              {{ parentCategory.name }}
+                            </div>
+                            <div
+                                v-for="subCategory in parentCategory.children"
+                                :key="subCategory.id"
+                                class="pl-4 py-1 hover:bg-gray-100 cursor-pointer"
+                                @click="selectCategory(subCategory)"
+                            >
+                              {{ subCategory.name }}
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverPanel>
+                    </Popover>
+                  </div>
                   <p v-if="errors.categoryId" class="mt-1 text-sm text-red-500">
                     {{ errors.categoryId }}
                   </p>
@@ -326,7 +353,11 @@ import {
   Dialog,
   DialogPanel,
   DialogTitle,
+  Popover,
+  PopoverButton,
+  PopoverPanel
 } from '@headlessui/vue';
+import { ChevronDown } from 'lucide-vue-next';
 import axios from '@/plugins/axios';
 import { useToast } from 'vue-toastification';
 
@@ -368,6 +399,28 @@ const unitOptions = [
   { value: 'SET', label: '세트' },
   { value: 'PKG', label: '팩' }
 ];
+
+// 카테고리 트리 구조
+const categoriesTree = computed(() => {
+  // 최상위 카테고리만 필터링
+  const topLevelCategories = props.categories.filter(cat => !cat.parentId);
+
+  // 각 최상위 카테고리에 대해 하위 카테고리 찾기
+  return topLevelCategories.map(parent => ({
+    ...parent,
+    children: props.categories.filter(cat => cat.parentId === parent.id)
+  }));
+});
+
+const selectedCategoryName = computed(() => {
+  if (!form.value.categoryId) return '';
+  const category = props.categories.find(cat => cat.id === form.value.categoryId);
+  return category ? category.name : '';
+});
+
+const selectCategory = (category) => {
+  form.value.categoryId = category.id;
+};
 
 // 폼 상태
 const form = ref({

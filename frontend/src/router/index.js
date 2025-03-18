@@ -152,7 +152,7 @@ const router = createRouter({
                         {
                             path: 'management',
                             name: 'Management',
-                            component: () => import('@/views/sis/product/ProductManagementView.vue')
+                            component: () => import('@/views/sis/product/ProductManagement.vue')
                         },
                         {
                             path: 'recipeManagement',
