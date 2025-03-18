@@ -1,4 +1,4 @@
-<!-- EmployeeLayout.vue -->
+<!-- CategoryLayout.vue -->
 <template>
   <div class="min-h-full">
     <div class="bg-white border-b">
@@ -33,9 +33,7 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const navItems = [
-  { name: '상품 관리', path: '/sis/product/management' },
-  { name: '레시피 관리', path: '/sis/product/recipeManagement'},
-  { name: '카테고리 관리', path: '/sis/product/categoryManagement'}
+  { name: '카테고리 관리', path: '/sis/category/categoryManagement' },
 ]
 
 const isCurrentRoute = (path) => route.path === path
