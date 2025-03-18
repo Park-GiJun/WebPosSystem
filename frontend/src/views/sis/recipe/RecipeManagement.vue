@@ -1,11 +1,11 @@
-<!-- RecipeManagement.vue -->
+<!-- views/sis/recipe/RecipeManagement.vue -->
 <template>
   <div class="p-6">
-    <!-- Header -->
+    <!-- 헤더 -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">레시피 관리</h1>
       <button
-          @click="showRecipeModal = true"
+          @click="openRecipeModal"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
       >
         <PlusIcon class="w-4 h-4" />
@@ -13,15 +13,15 @@
       </button>
     </div>
 
-    <!-- Search Form -->
+    <!-- 검색 필터 -->
     <div class="bg-white p-6 rounded-lg shadow mb-6">
-      <div class="grid grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">
             카테고리
           </label>
           <select
-              v-model="searchParams.categoryId"
+              v-model="filters.categoryId"
               class="w-full px-4 py-2 border rounded-lg"
           >
             <option value="">전체</option>
@@ -39,7 +39,7 @@
             상태
           </label>
           <select
-              v-model="searchParams.status"
+              v-model="filters.status"
               class="w-full px-4 py-2 border rounded-lg"
           >
             <option value="">전체</option>
@@ -54,7 +54,7 @@
           <div class="relative">
             <input
                 type="text"
-                v-model="searchParams.keyword"
+                v-model="filters.keyword"
                 placeholder="레시피명 입력"
                 class="w-full px-4 py-2 border rounded-lg pr-10"
             />
@@ -72,8 +72,8 @@
       </div>
     </div>
 
-    <!-- Recipe List -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <!-- 레시피 목록 -->
+    <div class="bg-white rounded-lg shadow">
       <div v-if="isLoading" class="p-6 text-center">
         <div class="flex justify-center">
           <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -110,7 +110,10 @@
               >
                 {{ component.ingredient.name }} ({{ component.quantity }}{{ component.unit }})
               </span>
-              <span v-if="recipe.recipeComponents && recipe.recipeComponents.length > 3" class="inline-block px-2 py-1 text-xs text-gray-500">
+              <span
+                  v-if="recipe.recipeComponents && recipe.recipeComponents.length > 3"
+                  class="inline-block px-2 py-1 text-xs text-gray-500"
+              >
                 외 {{ recipe.recipeComponents.length - 3 }}개
               </span>
             </div>
@@ -147,7 +150,7 @@
         </tbody>
       </table>
 
-      <!-- Pagination -->
+      <!-- 페이지네이션 -->
       <div class="flex justify-between items-center px-6 py-4 border-t">
         <div class="text-sm text-gray-500">
           총 {{ totalCount }}개 레시피
@@ -158,9 +161,9 @@
               :key="pageNum"
               @click="currentPage = pageNum"
               :class="[
-                'px-3 py-1 rounded',
-                currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-100'
-              ]"
+              'px-3 py-1 rounded',
+              currentPage === pageNum ? 'bg-blue-600 text-white' : 'bg-gray-100'
+            ]"
           >
             {{ pageNum }}
           </button>
@@ -168,24 +171,29 @@
       </div>
     </div>
 
-    <!-- Recipe Modal -->
+    <!-- 레시피 모달 -->
     <RecipeModal
         v-if="showRecipeModal"
         :show="showRecipeModal"
-        :recipe="editingRecipe"
+        :recipe="selectedRecipe"
         :categories="categories"
         @close="closeRecipeModal"
         @submit="handleRecipeSubmit"
     />
 
-    <!-- Confirm Delete Modal -->
+    <!-- 삭제 확인 모달 -->
     <BaseModal
         v-model="showDeleteModal"
         title="레시피 삭제"
     >
       <div class="p-4">
-        <p>정말 "<span class="font-semibold">{{ recipeToDelete?.name }}</span>" 레시피를 삭제하시겠습니까?</p>
-        <p class="mt-2 text-sm text-gray-500">이 작업은 되돌릴 수 없습니다.</p>
+        <p>
+          정말 "<span class="font-semibold">{{ recipeToDelete?.name }}</span>" 레시피를
+          삭제하시겠습니까?
+        </p>
+        <p class="mt-2 text-sm text-gray-500">
+          이 작업은 되돌릴 수 없습니다.
+        </p>
 
         <div class="flex justify-end gap-3 mt-6">
           <button
@@ -208,50 +216,71 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { PlusIcon, PencilIcon, TrashIcon, SearchIcon } from 'lucide-vue-next';
-import RecipeModal from '@/components/recipe/RecipeModal.vue';
-import BaseModal from '@/components/base/BaseModal.vue';
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  SearchIcon
+} from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import axios from '@/plugins/axios';
 
+import RecipeModal from '@/components/recipe/RecipeModal.vue';
+import BaseModal from '@/components/base/BaseModal.vue';
+
 const toast = useToast();
 
-// State
+// 상태 관리
 const isLoading = ref(false);
 const recipes = ref([]);
 const categories = ref([]);
 const totalCount = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(10);
-const searchParams = ref({
+
+// 모달 상태
+const showRecipeModal = ref(false);
+const showDeleteModal = ref(false);
+const selectedRecipe = ref(null);
+const recipeToDelete = ref(null);
+
+// 필터 상태
+const filters = ref({
   categoryId: '',
   status: '',
   keyword: ''
 });
 
-const showRecipeModal = ref(false);
-const showDeleteModal = ref(false);
-const editingRecipe = ref(null);
-const recipeToDelete = ref(null);
-
-// Computed
-const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value));
+// 페이지네이션 계산
 const pageNumbers = computed(() => {
-  if (totalPages.value <= 5) {
-    return Array.from({ length: totalPages.value }, (_, i) => i + 1);
+  const totalPages = Math.ceil(totalCount.value / pageSize.value);
+
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
 
   const current = currentPage.value;
   if (current <= 3) {
     return [1, 2, 3, 4, 5];
   }
-  if (current >= totalPages.value - 2) {
-    return Array.from({ length: 5 }, (_, i) => totalPages.value - 4 + i);
+  if (current >= totalPages - 2) {
+    return Array.from({ length: 5 }, (_, i) => totalPages - 4 + i);
   }
+
   return [current - 2, current - 1, current, current + 1, current + 2];
 });
 
-// Methods
+// 메서드들
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('/categories');
+    categories.value = response.data.data.content || [];
+  } catch (error) {
+    console.error('카테고리 불러오기 실패:', error);
+    toast.error('카테고리 목록을 불러오는데 실패했습니다.');
+  }
+};
+
 const fetchRecipes = async () => {
   try {
     isLoading.value = true;
@@ -259,43 +288,41 @@ const fetchRecipes = async () => {
     const params = {
       page: currentPage.value - 1,
       size: pageSize.value,
-      ...searchParams.value
+      productType: 'RECIPE_PRODUCT',
+      ...filters.value
     };
 
-    const response = await axios.get('/products', {
-      params: {
-        ...params,
-        productType: 'RECIPE_PRODUCT'
-      }
-    });
+    const response = await axios.get('/products', { params });
 
     if (response.data && response.data.data) {
       recipes.value = response.data.data.content || [];
       totalCount.value = response.data.data.totalElements || 0;
     }
   } catch (error) {
-    console.error('Failed to fetch recipes:', error);
+    console.error('레시피 불러오기 실패:', error);
     toast.error('레시피 목록을 불러오는데 실패했습니다.');
   } finally {
     isLoading.value = false;
   }
 };
 
-const fetchCategories = async () => {
-  try {
-    const response = await axios.get('/categories');
-    if (response.data && response.data.data) {
-      categories.value = response.data.data.content || [];
-    }
-  } catch (error) {
-    console.error('Failed to fetch categories:', error);
-    toast.error('카테고리 목록을 불러오는데 실패했습니다.');
-  }
+const openRecipeModal = () => {
+  selectedRecipe.value = null;
+  showRecipeModal.value = true;
 };
 
 const editRecipe = (recipe) => {
-  editingRecipe.value = recipe;
+  selectedRecipe.value = recipe;
   showRecipeModal.value = true;
+};
+
+const closeRecipeModal = () => {
+  showRecipeModal.value = false;
+  selectedRecipe.value = null;
+};
+
+const handleRecipeSubmit = () => {
+  fetchRecipes();
 };
 
 const confirmDeleteRecipe = (recipe) => {
@@ -308,73 +335,25 @@ const deleteRecipe = async () => {
 
   try {
     await axios.delete(`/products/${recipeToDelete.value.id}`);
-    toast.success('레시피가 성공적으로 삭제되었습니다.');
-    await fetchRecipes();
+    toast.success('레시피가 삭제되었습니다.');
+    fetchRecipes();
     showDeleteModal.value = false;
-    recipeToDelete.value = null;
   } catch (error) {
-    console.error('Failed to delete recipe:', error);
+    console.error('레시피 삭제 실패:', error);
     toast.error('레시피 삭제에 실패했습니다.');
   }
 };
 
-const handleRecipeSubmit = async (data) => {
-  try {
-    // 레시피 데이터 가공 - ProductDTO.ProductCreateRequest 또는 ProductUpdateRequest 형식으로 맞춤
-    const productData = {
-      name: data.name,
-      categoryId: data.categoryId,
-      description: data.instructions,
-      price: data.price,
-      costPrice: 0, // 비용은 재료의 합이나 기본값
-      status: data.status,
-      productType: 'RECIPE_PRODUCT',
-      // RecipeComponent에 대한 데이터 매핑
-      recipeComponents: data.ingredients.map(ing => ({
-        ingredientId: ing.ingredientId,
-        quantity: ing.amount,
-        unit: ing.unit
-      }))
-    };
-
-    if (editingRecipe.value) {
-      // 기존 레시피 수정
-      await axios.put(`/products/${editingRecipe.value.id}`, { data: productData });
-      toast.success('레시피가 성공적으로 수정되었습니다.');
-    } else {
-      // 신규 레시피 등록 - 필요한 추가 필드
-      productData.code = `RECIPE_${Date.now()}`;  // 임시 상품 코드 생성
-      productData.stock = 0;  // 재고는 재료로 계산되거나 기본값 사용
-      productData.minStock = 0;
-      productData.isTaxable = true;
-
-      await axios.post('/products', { data: productData });
-      toast.success('레시피가 성공적으로 등록되었습니다.');
-    }
-
-    closeRecipeModal();
-    await fetchRecipes();
-  } catch (error) {
-    console.error('Failed to save recipe:', error);
-    toast.error(error.response?.data?.message || '레시피 저장에 실패했습니다.');
-  }
-};
-
-const closeRecipeModal = () => {
-  showRecipeModal.value = false;
-  editingRecipe.value = null;
-};
-
 const formatPrice = (price) => {
-  return price ? `₩${Number(price).toLocaleString()}` : '₩0';
+  return price ? `₩${Number(price).toLocaleString()}` : '-';
 };
 
-// Watch
+// 페이지 변경 감지
 watch(currentPage, () => {
   fetchRecipes();
 });
 
-// Initial fetch
+// 초기 로드
 onMounted(() => {
   fetchCategories();
   fetchRecipes();

@@ -1,6 +1,7 @@
+<!-- components/recipe/IngredientsModal.vue -->
 <template>
   <TransitionRoot appear :show="show" as="template">
-    <Dialog as="div" @close="onClose" class="relative z-50">
+    <Dialog as="div" @close="$emit('close')" class="relative z-50">
       <TransitionChild
           enter="duration-300 ease-out"
           enter-from="opacity-0"
@@ -27,10 +28,10 @@
                 <DialogTitle class="text-lg font-bold">재료 선택</DialogTitle>
                 <button
                     type="button"
-                    @click="onClose"
+                    @click="$emit('close')"
                     class="text-gray-400 hover:text-gray-500"
                 >
-                  <XIcon class="h-6 w-6" />
+                  <XIcon class="w-6 h-6" />
                 </button>
               </div>
 
@@ -47,8 +48,20 @@
                 </div>
               </div>
 
+              <!-- 로딩 상태 -->
+              <div v-if="isLoading" class="p-4 text-center">
+                <div class="flex justify-center">
+                  <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+                <p class="mt-2 text-gray-600">재료 목록을 불러오는 중...</p>
+              </div>
+
               <!-- 재료 목록 -->
-              <div class="h-96 overflow-y-auto border rounded-lg">
+              <div v-else-if="filteredIngredients.length === 0" class="p-4 text-center text-gray-500">
+                일치하는 재료가 없습니다.
+              </div>
+
+              <div v-else class="h-72 overflow-y-auto border rounded-lg">
                 <table class="w-full">
                   <thead class="bg-gray-50 sticky top-0">
                   <tr>
@@ -67,7 +80,7 @@
                     </td>
                     <td class="px-4 py-3 text-center">
                       <button
-                          @click="selectIngredient(ingredient)"
+                          @click="$emit('select', ingredient)"
                           class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
                       >
                         선택
@@ -76,47 +89,6 @@
                   </tr>
                   </tbody>
                 </table>
-              </div>
-
-              <!-- 선택된 재료 입력 -->
-              <div v-if="selectedIngredient" class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 class="font-medium mb-3">재료 정보 입력</h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      수량
-                    </label>
-                    <input
-                        type="number"
-                        v-model.number="amount"
-                        min="0.1"
-                        step="0.1"
-                        class="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      단위
-                    </label>
-                    <select
-                        v-model="unit"
-                        class="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option :value="selectedIngredient.unit">
-                        {{ selectedIngredient.unit }}
-                      </option>
-                      <!-- 추가 단위 변환 옵션들 -->
-                    </select>
-                  </div>
-                </div>
-                <div class="flex justify-end mt-4">
-                  <button
-                      @click="addIngredient"
-                      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    추가
-                  </button>
-                </div>
               </div>
             </DialogPanel>
           </TransitionChild>
@@ -127,70 +99,67 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { Dialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild } from '@headlessui/vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import {
+  TransitionRoot,
+  TransitionChild,
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+} from '@headlessui/vue';
 import { XIcon, SearchIcon } from 'lucide-vue-next';
+import axios from '@/plugins/axios';
+import { useToast } from 'vue-toastification';
 
 const props = defineProps({
-  show: Boolean,
-  ingredients: {
-    type: Array,
-    default: () => []
-  }
+  show: Boolean
 });
 
 const emit = defineEmits(['close', 'select']);
+const toast = useToast();
 
 const searchKeyword = ref('');
-const selectedIngredient = ref(null);
-const amount = ref(1);
-const unit = ref('');
+const isLoading = ref(false);
+const ingredients = ref([]);
 
-// 검색 필터 적용
+// 필터링된 재료 목록
 const filteredIngredients = computed(() => {
-  if (!searchKeyword.value) return props.ingredients;
-  const keyword = searchKeyword.value.toLowerCase();
-  return props.ingredients.filter(ing =>
+  const keyword = searchKeyword.value.toLowerCase().trim();
+  return ingredients.value.filter(ing =>
       ing.name.toLowerCase().includes(keyword)
   );
 });
 
-// 재료 선택
-const selectIngredient = (ingredient) => {
-  selectedIngredient.value = ingredient;
-  unit.value = ingredient.unit;
-};
-
-// 재료 추가 후 `close` 호출하지 않음
-const addIngredient = () => {
-  if (!selectedIngredient.value || amount.value <= 0) return;
-
-  emit('select', {
-    id: selectedIngredient.value.id,
-    name: selectedIngredient.value.name,
-    amount: amount.value,
-    unit: unit.value,
-    unitPrice: selectedIngredient.value.unitPrice
-  });
-
-  resetForm(); // 모달은 닫지 않고 폼만 초기화
-};
-
-// 폼 초기화
-const resetForm = () => {
-  selectedIngredient.value = null;
-  amount.value = 1;
-  unit.value = '';
-};
-
-// 모달 닫기 (부모가 직접 닫도록 수정)
-const onClose = () => {
-  resetForm();
-  emit('close');
+// 재료 목록 불러오기
+const fetchIngredients = async () => {
+  try {
+    isLoading.value = true;
+    const response = await axios.get('/products/raw-materials');
+    ingredients.value = response.data.data || [];
+  } catch (error) {
+    console.error('Failed to fetch ingredients:', error);
+    toast.error('재료 목록을 불러오는데 실패했습니다.');
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 // 가격 포맷팅
 const formatPrice = (price) => {
-  return `₩${price.toLocaleString()}`;
+  return price ? `₩${Number(price).toLocaleString()}` : '-';
 };
+
+// 모달 오픈 시 재료 목록 로드
+watch(() => props.show, (show) => {
+  if (show) {
+    fetchIngredients();
+  }
+});
+
+// 초기 로드
+onMounted(() => {
+  if (props.show) {
+    fetchIngredients();
+  }
+});
 </script>
