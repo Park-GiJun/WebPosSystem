@@ -90,49 +90,34 @@
                 </div>
 
                 <!-- 카테고리 -->
-                <!-- 카테고리 -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
                     카테고리
                     <span class="text-red-500">*</span>
                   </label>
-                  <div class="w-full">
-                    <Popover v-slot="{ open }" class="relative">
-                      <PopoverButton
-                          class="w-full px-4 py-2 border rounded-lg text-left flex justify-between items-center"
-                          :class="{'border-red-500': errors.categoryId}"
-                      >
-                        {{ selectedCategoryName || '카테고리 선택' }}
-                        <ChevronDown class="w-4 h-4" />
-                      </PopoverButton>
+                  <select
+                      v-model="form.categoryId"
+                      required
+                      class="w-full px-4 py-2 border rounded-lg"
+                      :class="{'border-red-500': errors.categoryId}"
+                  >
+                    <option value="">카테고리 선택</option>
 
-                      <PopoverPanel
-                          class="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
-                      >
-                        <div class="p-2">
-                          <div
-                              v-for="parentCategory in categoriesTree"
-                              :key="parentCategory.id"
-                              class="mb-2"
-                          >
-                            <div
-                                class="font-semibold text-gray-700 mb-1 border-b pb-1"
-                            >
-                              {{ parentCategory.name }}
-                            </div>
-                            <div
-                                v-for="subCategory in parentCategory.children"
-                                :key="subCategory.id"
-                                class="pl-4 py-1 hover:bg-gray-100 cursor-pointer"
-                                @click="selectCategory(subCategory)"
-                            >
-                              {{ subCategory.name }}
-                            </div>
-                          </div>
-                        </div>
-                      </PopoverPanel>
-                    </Popover>
-                  </div>
+                    <!-- 최상위 카테고리 그룹 -->
+                    <optgroup v-for="parentCat in categories.filter(c => !c.parentId)"
+                              :key="'group-'+parentCat.id"
+                              :label="parentCat.name">
+                      <!-- 최상위 카테고리 자체 -->
+                      <option :value="parentCat.id">{{ parentCat.name }} (자체)</option>
+
+                      <!-- 하위 카테고리들 -->
+                      <option v-for="childCat in categories.filter(c => c.parentId === parentCat.id)"
+                              :key="childCat.id"
+                              :value="childCat.id">
+                        — {{ childCat.name }}
+                      </option>
+                    </optgroup>
+                  </select>
                   <p v-if="errors.categoryId" class="mt-1 text-sm text-red-500">
                     {{ errors.categoryId }}
                   </p>
@@ -353,11 +338,7 @@ import {
   Dialog,
   DialogPanel,
   DialogTitle,
-  Popover,
-  PopoverButton,
-  PopoverPanel
 } from '@headlessui/vue';
-import { ChevronDown } from 'lucide-vue-next';
 import axios from '@/plugins/axios';
 import { useToast } from 'vue-toastification';
 
@@ -367,16 +348,16 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
-  editingProduct: {
+  product: {
     type: Object,
     default: null
   }
 });
 
-const emit = defineEmits(['update:show', 'refresh']);
+const emit = defineEmits(['close', 'submit']);
 const toast = useToast();
 
-const isEditing = computed(() => !!props.editingProduct);
+const isEditing = computed(() => !!props.product);
 const isSubmitting = ref(false);
 const errors = ref({});
 
@@ -400,28 +381,6 @@ const unitOptions = [
   { value: 'PKG', label: '팩' }
 ];
 
-// 카테고리 트리 구조
-const categoriesTree = computed(() => {
-  // 최상위 카테고리만 필터링
-  const topLevelCategories = props.categories.filter(cat => !cat.parentId);
-
-  // 각 최상위 카테고리에 대해 하위 카테고리 찾기
-  return topLevelCategories.map(parent => ({
-    ...parent,
-    children: props.categories.filter(cat => cat.parentId === parent.id)
-  }));
-});
-
-const selectedCategoryName = computed(() => {
-  if (!form.value.categoryId) return '';
-  const category = props.categories.find(cat => cat.id === form.value.categoryId);
-  return category ? category.name : '';
-});
-
-const selectCategory = (category) => {
-  form.value.categoryId = category.id;
-};
-
 // 폼 상태
 const form = ref({
   code: '',
@@ -442,7 +401,7 @@ const form = ref({
 });
 
 // 폼 초기화
-watch(() => props.editingProduct, (product) => {
+watch(() => props.product, (product) => {
   if (product) {
     form.value = {
       name: product.name,
@@ -548,7 +507,7 @@ const handleSubmit = async () => {
         imageUrl: form.value.imageUrl
       };
 
-      await axios.put(`/products/${props.editingProduct.id}`, { data });
+      await axios.put(`/products/${props.product.id}`, { data });
       toast.success('상품이 수정되었습니다');
     } else {
       // 신규 상품 등록
@@ -573,7 +532,7 @@ const handleSubmit = async () => {
       toast.success('상품이 등록되었습니다');
     }
 
-    emit('refresh');
+    emit('submit');
     onClose();
   } catch (error) {
     console.error('Failed to save product:', error);
@@ -589,7 +548,7 @@ const handleSubmit = async () => {
 };
 
 const onClose = () => {
-  emit('update:show', false);
+  emit('close');
   errors.value = {};
 };
 </script>

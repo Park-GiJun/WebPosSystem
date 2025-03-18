@@ -196,24 +196,24 @@
         @refresh="fetchCategories"
     />
 
-    <!-- 재고 조정 모달 -->
-    <StockModal
-        v-if="showStockModal"
-        :product="selectedProduct"
-        :show="showStockModal"
-        @close="showStockModal = false"
-        @update-stock="handleStockUpdate"
-    />
+<!--    &lt;!&ndash; 재고 조정 모달 &ndash;&gt;-->
+<!--    <StockModal-->
+<!--        v-if="showStockModal"-->
+<!--        :product="selectedProduct"-->
+<!--        :show="showStockModal"-->
+<!--        @close="showStockModal = false"-->
+<!--        @update-stock="handleStockUpdate"-->
+<!--    />-->
 
-    <!-- 삭제 확인 모달 -->
-    <ConfirmModal
-        v-if="showDeleteModal"
-        :show="showDeleteModal"
-        :title="`상품 삭제`"
-        :message="`'${selectedProduct?.name}' 상품을 삭제하시겠습니까?`"
-        @close="showDeleteModal = false"
-        @confirm="deleteProduct"
-    />
+<!--    &lt;!&ndash; 삭제 확인 모달 &ndash;&gt;-->
+<!--    <ConfirmModal-->
+<!--        v-if="showDeleteModal"-->
+<!--        :show="showDeleteModal"-->
+<!--        :title="`상품 삭제`"-->
+<!--        :message="`'${selectedProduct?.name}' 상품을 삭제하시겠습니까?`"-->
+<!--        @close="showDeleteModal = false"-->
+<!--        @confirm="deleteProduct"-->
+<!--    />-->
   </div>
 </template>
 
@@ -225,8 +225,8 @@ import axios from '@/plugins/axios';
 
 import ProductModal from '@/components/product/ProductModal.vue';
 import CategoryModal from '@/components/category/CategoryModal.vue';
-import StockModal from '@/components/product/StockModal.vue';
-import ConfirmModal from '@/components/common/ConfirmModal.vue';
+// import StockModal from '@/components/product/StockModal.vue';
+// import ConfirmModal from '@/components/common/ConfirmModal.vue';
 
 const toast = useToast();
 
@@ -334,7 +334,7 @@ const deleteProduct = async () => {
   try {
     await axios.delete(`/products/${selectedProduct.value.id}`);
     toast.success('상품이 성공적으로 삭제되었습니다.');
-    fetchProducts();
+    await fetchProducts();
     showDeleteModal.value = false;
   } catch (error) {
     console.error('Failed to delete product:', error);
@@ -354,7 +354,7 @@ const handleProductSubmit = async (productData) => {
       toast.success('상품이 등록되었습니다.');
     }
     showProductModal.value = false;
-    fetchProducts();
+    await fetchProducts();
   } catch (error) {
     console.error('Failed to save product:', error);
     toast.error('상품 저장에 실패했습니다.');
@@ -366,7 +366,7 @@ const handleStockUpdate = async (data) => {
     await axios.patch(`/products/${selectedProduct.value.id}/stock`, { data });
     toast.success('재고가 성공적으로 업데이트되었습니다.');
     showStockModal.value = false;
-    fetchProducts();
+    await fetchProducts();
   } catch (error) {
     console.error('Failed to update stock:', error);
     toast.error('재고 업데이트에 실패했습니다.');

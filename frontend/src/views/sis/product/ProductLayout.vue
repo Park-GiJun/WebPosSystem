@@ -34,6 +34,7 @@ const route = useRoute()
 
 const navItems = [
   { name: '상품 관리', path: '/sis/product/management' },
+  { name: '상품 관리', path: '/sis/product/management2' },
   { name: '레시피 관리', path: '/sis/product/recipeManagement'},
   { name: '카테고리 관리', path: '/sis/product/categoryManagement'}
 ]

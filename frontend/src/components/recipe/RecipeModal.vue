@@ -1,7 +1,7 @@
 <!-- components/recipe/RecipeModal.vue -->
 <template>
   <TransitionRoot appear :show="show" as="template">
-    <Dialog as="div" @close="onClose" class="relative z-50">
+    <Dialog as="div" @close="onClose" class="relative z-10">
       <TransitionChild
           enter="duration-300 ease-out"
           enter-from="opacity-0"
@@ -83,7 +83,7 @@
                     </label>
                     <button
                         type="button"
-                        @click="showIngredientModal = true"
+                        @click="openIngredientModal"
                         class="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
                     >
                       + 재료 추가
@@ -249,151 +249,132 @@
     </Dialog>
   </TransitionRoot>
 
-  <!-- Ingredient Selection Modal -->
-  <TransitionRoot appear :show="showIngredientModal" as="template">
-    <Dialog as="div" @close="showIngredientModal = false" class="relative z-50">
-      <TransitionChild
-          enter="duration-300 ease-out"
-          enter-from="opacity-0"
-          enter-to="opacity-100"
-          leave="duration-200 ease-in"
-          leave-from="opacity-100"
-          leave-to="opacity-0"
-      >
-        <div class="fixed inset-0 bg-black/25" />
-      </TransitionChild>
+  <!-- Ingredient Selection Modal - 별도의 모달로 분리하여 이벤트 전파 문제 해결 -->
+  <Dialog :open="showIngredientModal" @close="closeIngredientModal($event)" class="relative z-[100]">
+  <div class="fixed inset-0 bg-black/25" aria-hidden="true" />
 
-      <div class="fixed inset-0 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4">
-          <TransitionChild
-              enter="duration-300 ease-out"
-              enter-from="opacity-0 scale-95"
-              enter-to="opacity-100 scale-100"
-              leave="duration-200 ease-in"
-              leave-from="opacity-100 scale-100"
-              leave-to="opacity-0 scale-95"
-          >
-            <DialogPanel class="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
-              <div class="flex justify-between items-center mb-4">
-                <DialogTitle class="text-lg font-bold">재료 선택</DialogTitle>
-                <button
-                    type="button"
-                    @click="showIngredientModal = false"
-                    class="text-gray-400 hover:text-gray-500"
-                >
-                  <XIcon class="w-6 h-6" />
-                </button>
-              </div>
+    <div class="fixed inset-0 overflow-y-auto">
+      <div class="flex min-h-full items-center justify-center p-4">
+        <DialogPanel class="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl">
+          <div class="flex justify-between items-center mb-4">
+            <DialogTitle class="text-lg font-bold">재료 선택</DialogTitle>
+            <button
+                type="button"
+                @click="closeIngredientModal"
+                class="text-gray-400 hover:text-gray-500"
+            >
+              <XIcon class="w-6 h-6" />
+            </button>
+          </div>
 
-              <!-- 검색 필터 -->
-              <div class="mb-4">
-                <div class="relative">
-                  <input
-                      type="text"
-                      v-model="ingredientSearchKeyword"
-                      placeholder="재료명 검색..."
-                      class="w-full px-4 py-2 pr-10 border rounded-lg"
-                  />
-                  <SearchIcon class="w-5 h-5 text-gray-400 absolute right-3 top-2.5" />
-                </div>
-              </div>
+          <!-- 검색 필터 -->
+          <div class="mb-4">
+            <div class="relative">
+              <input
+                  type="text"
+                  v-model="ingredientSearchKeyword"
+                  placeholder="재료명 검색..."
+                  class="w-full px-4 py-2 pr-10 border rounded-lg"
+              />
+              <SearchIcon class="w-5 h-5 text-gray-400 absolute right-3 top-2.5" />
+            </div>
+          </div>
 
-              <div v-if="isLoadingIngredients" class="p-4 text-center">
-                <div class="flex justify-center">
-                  <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-                <p class="mt-2 text-gray-600">재료 목록을 불러오는 중...</p>
-              </div>
+          <div v-if="isLoadingIngredients" class="p-4 text-center">
+            <div class="flex justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+            <p class="mt-2 text-gray-600">재료 목록을 불러오는 중...</p>
+          </div>
 
-              <!-- 재료 목록 -->
-              <div v-else class="h-72 overflow-y-auto border rounded-lg">
-                <table class="w-full">
-                  <thead class="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">재료명</th>
-                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">기본 단위</th>
-                    <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">선택</th>
-                  </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-200">
-                  <tr v-for="ingredient in filteredIngredients" :key="ingredient.id">
-                    <td class="px-4 py-3">{{ ingredient.name }}</td>
-                    <td class="px-4 py-3">{{ ingredient.unit }}</td>
-                    <td class="px-4 py-3 text-center">
-                      <button
-                          @click="selectIngredient(ingredient)"
-                          class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                      >
-                        선택
-                      </button>
-                    </td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- 선택된 재료 입력 -->
-              <div v-if="selectedIngredient" class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 class="font-medium mb-3">재료 정보 입력</h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      수량
-                    </label>
-                    <input
-                        type="number"
-                        v-model.number="ingredientAmount"
-                        min="0.1"
-                        step="0.1"
-                        class="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      단위
-                    </label>
-                    <select
-                        v-model="ingredientUnit"
-                        class="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option :value="selectedIngredient.unit">
-                        {{ selectedIngredient.unit }}
-                      </option>
-                      <option value="g">g</option>
-                      <option value="ml">ml</option>
-                      <option value="개">개</option>
-                      <option value="컵">컵</option>
-                      <option value="oz">oz</option>
-                      <option value="tbsp">tbsp</option>
-                      <option value="tsp">tsp</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="flex justify-end mt-4">
+          <!-- 재료 목록 -->
+          <div v-else class="h-72 overflow-y-auto border rounded-lg">
+            <table class="w-full">
+              <thead class="bg-gray-50 sticky top-0">
+              <tr>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">재료명</th>
+                <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">기본 단위</th>
+                <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">선택</th>
+              </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+              <tr v-for="ingredient in filteredIngredients" :key="ingredient.id">
+                <td class="px-4 py-3">{{ ingredient.name }}</td>
+                <td class="px-4 py-3">{{ ingredient.unit }}</td>
+                <td class="px-4 py-3 text-center">
                   <button
-                      @click="addIngredient"
-                      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      @click="selectIngredient(ingredient)"
+                      class="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
                   >
-                    추가
+                    선택
                   </button>
-                </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 선택된 재료 입력 -->
+          <div v-if="selectedIngredient" class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h3 class="font-medium mb-3">재료 정보 입력</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  수량
+                </label>
+                <input
+                    type="number"
+                    v-model.number="ingredientAmount"
+                    min="0.1"
+                    step="0.1"
+                    class="w-full px-4 py-2 border rounded-lg"
+                />
               </div>
-            </DialogPanel>
-          </TransitionChild>
-        </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  단위
+                </label>
+                <select
+                    v-model="ingredientUnit"
+                    class="w-full px-4 py-2 border rounded-lg"
+                >
+                  <option :value="selectedIngredient.unit">
+                    {{ selectedIngredient.unit }}
+                  </option>
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="개">개</option>
+                  <option value="컵">컵</option>
+                  <option value="oz">oz</option>
+                  <option value="tbsp">tbsp</option>
+                  <option value="tsp">tsp</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex justify-end mt-4">
+              <button
+                  type="button"
+                  @click="addIngredient"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </DialogPanel>
       </div>
-    </Dialog>
-  </TransitionRoot>
+    </div>
+  </Dialog>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import {
-  TransitionRoot,
-  TransitionChild,
   Dialog,
   DialogPanel,
   DialogTitle,
+  TransitionRoot,
+  TransitionChild,
 } from '@headlessui/vue';
 import { XIcon, SearchIcon } from 'lucide-vue-next';
 import axios from '@/plugins/axios';
@@ -487,6 +468,20 @@ const fetchIngredients = async () => {
   }
 };
 
+const openIngredientModal = () => {
+  // 모달 열기 전에 재료 목록 불러오기
+  fetchIngredients();
+  showIngredientModal.value = true;
+};
+
+const closeIngredientModal = (event) => {
+  if (event) event.stopPropagation();
+  showIngredientModal.value = false;
+  selectedIngredient.value = null;
+  ingredientAmount.value = 1;
+};
+
+
 const selectIngredient = (ingredient) => {
   selectedIngredient.value = ingredient;
   ingredientUnit.value = ingredient.unit || 'g';
@@ -520,9 +515,9 @@ const addIngredient = () => {
     toast.success(`${selectedIngredient.value.name}이(가) 추가되었습니다.`);
   }
 
-  // 재료 선택 상태 초기화
+  // 재료 선택 상태 초기화 후 모달 닫기
   selectedIngredient.value = null;
-  showIngredientModal.value = false;
+  closeIngredientModal();
 };
 
 const removeIngredient = (index) => {
@@ -593,18 +588,4 @@ const handleSubmit = async () => {
 const onClose = () => {
   emit('close');
 };
-
-// 모달이 열릴 때 재료 목록 로드
-watch(() => props.show, (show) => {
-  if (show) {
-    fetchIngredients();
-  }
-});
-
-// 초기 로드
-onMounted(() => {
-  if (props.show) {
-    fetchIngredients();
-  }
-});
 </script>

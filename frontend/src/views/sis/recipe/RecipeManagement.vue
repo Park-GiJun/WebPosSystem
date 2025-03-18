@@ -262,7 +262,6 @@ const fetchRecipes = async () => {
       ...searchParams.value
     };
 
-    // API 경로: 상품이면서 타입이 RECIPE_PRODUCT인 상품을 조회
     const response = await axios.get('/products', {
       params: {
         ...params,
@@ -310,7 +309,7 @@ const deleteRecipe = async () => {
   try {
     await axios.delete(`/products/${recipeToDelete.value.id}`);
     toast.success('레시피가 성공적으로 삭제되었습니다.');
-    fetchRecipes();
+    await fetchRecipes();
     showDeleteModal.value = false;
     recipeToDelete.value = null;
   } catch (error) {
@@ -354,7 +353,7 @@ const handleRecipeSubmit = async (data) => {
     }
 
     closeRecipeModal();
-    fetchRecipes();
+    await fetchRecipes();
   } catch (error) {
     console.error('Failed to save recipe:', error);
     toast.error(error.response?.data?.message || '레시피 저장에 실패했습니다.');

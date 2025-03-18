@@ -1,4 +1,3 @@
-<!-- components/recipe/IngredientModal.vue -->
 <template>
   <TransitionRoot appear :show="show" as="template">
     <Dialog as="div" @close="onClose" class="relative z-50">
@@ -147,6 +146,7 @@ const selectedIngredient = ref(null);
 const amount = ref(1);
 const unit = ref('');
 
+// 검색 필터 적용
 const filteredIngredients = computed(() => {
   if (!searchKeyword.value) return props.ingredients;
   const keyword = searchKeyword.value.toLowerCase();
@@ -155,11 +155,13 @@ const filteredIngredients = computed(() => {
   );
 });
 
+// 재료 선택
 const selectIngredient = (ingredient) => {
   selectedIngredient.value = ingredient;
   unit.value = ingredient.unit;
 };
 
+// 재료 추가 후 `close` 호출하지 않음
 const addIngredient = () => {
   if (!selectedIngredient.value || amount.value <= 0) return;
 
@@ -171,20 +173,23 @@ const addIngredient = () => {
     unitPrice: selectedIngredient.value.unitPrice
   });
 
-  resetForm();
+  resetForm(); // 모달은 닫지 않고 폼만 초기화
 };
 
+// 폼 초기화
 const resetForm = () => {
   selectedIngredient.value = null;
   amount.value = 1;
   unit.value = '';
 };
 
+// 모달 닫기 (부모가 직접 닫도록 수정)
 const onClose = () => {
   resetForm();
   emit('close');
 };
 
+// 가격 포맷팅
 const formatPrice = (price) => {
   return `₩${price.toLocaleString()}`;
 };
