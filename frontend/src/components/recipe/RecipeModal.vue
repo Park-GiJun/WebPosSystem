@@ -329,9 +329,8 @@ const closeIngredientsModal = () => {
 }
 
 const openIngredientQuantityModal = (ingredient) => {
-  // 1차 모달 상태 유지
   selectedIngredient.value = ingredient
-  isIngredientQuantityModalOpen.value = true
+  // isIngredientQuantityModalOpen.value = true
 }
 
 const closeIngredientQuantityModal = () => {
@@ -354,7 +353,7 @@ const addIngredient = (ingredientData) => {
   }
 
   // 2차 모달만 닫기 - 1차 모달은 열린 상태 유지
-  closeIngredientQuantityModal()
+  isIngredientQuantityModalOpen.value = false;
 }
 
 const removeIngredient = (index) => {

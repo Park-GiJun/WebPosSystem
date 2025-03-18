@@ -141,7 +141,7 @@ const addIngredient = () => {
     unit: unit.value
   });
 
-  onClose();
+  // onClose();
 };
 
 // 모달 닫기
