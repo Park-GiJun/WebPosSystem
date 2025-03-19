@@ -98,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import {
   TransitionRoot,
   TransitionChild,
@@ -118,7 +118,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'add']);
 
 const amount = ref(1);
-const unit = ref(props.ingredient.unit);
+const unit = ref('');
+
+// 단위 초기화
+watch(() => props.ingredient, (newIngredient) => {
+  if (newIngredient && newIngredient.unit) {
+    unit.value = newIngredient.unit;
+  }
+}, { immediate: true });
 
 // 입력 유효성 검사
 const isValidInput = computed(() =>
@@ -140,14 +147,12 @@ const addIngredient = () => {
     amount: amount.value,
     unit: unit.value
   });
-
-  // onClose();
 };
 
 // 모달 닫기
 const onClose = () => {
   emit('close');
+  // 폼 초기화
   amount.value = 1;
-  unit.value = props.ingredient.unit;
 };
 </script>

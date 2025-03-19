@@ -43,8 +43,8 @@
               class="w-full px-4 py-2 border rounded-lg"
           >
             <option value="">전체</option>
-            <option value="ACTIVE">활성</option>
-            <option value="INACTIVE">비활성</option>
+            <option value="ON_SALE">활성</option>
+            <option value="DISCONTINUED">비활성</option>
           </select>
         </div>
         <div class="col-span-2">
@@ -124,10 +124,10 @@
             <span
                 :class="[
                 'px-2 py-1 rounded-full text-xs font-medium',
-                recipe.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                recipe.status === 'ON_SALE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
               ]"
             >
-              {{ recipe.status === 'ACTIVE' ? '활성' : '비활성' }}
+              {{ recipe.status === 'ON_SALE' ? '활성' : '비활성' }}
             </span>
           </td>
           <td class="px-6 py-4">
