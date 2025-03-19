@@ -1,7 +1,7 @@
 // components/pos/OrderList.vue
 <template>
   <div class="w-96 bg-white shadow-lg flex flex-col">
-    <!-- Order Header -->
+    <!-- 주문 헤더 -->
     <div class="p-4 border-b">
       <div class="flex justify-between items-center mb-2">
         <h2 class="text-lg font-bold">주문 내역</h2>
@@ -9,7 +9,7 @@
       </div>
     </div>
 
-    <!-- Order Items -->
+    <!-- 주문 아이템 목록 -->
     <div class="flex-1 overflow-y-auto p-4">
       <div
           v-for="(item, index) in orderItems"
@@ -44,7 +44,7 @@
       </div>
     </div>
 
-    <!-- Order Summary -->
+    <!-- 주문 요약 -->
     <div class="border-t p-4">
       <div class="space-y-2 mb-4">
         <div class="flex justify-between">
@@ -61,21 +61,21 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
+      <!-- 액션 버튼 -->
       <div class="grid grid-cols-2 gap-4">
         <button
             @click="clearOrder"
-            :disabled="orderItems.length === 0"
+            :disabled="orderItems.length === 0 || isProcessing"
             class="px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           주문취소
         </button>
         <button
             @click="$emit('showPayment')"
-            :disabled="orderItems.length === 0"
+            :disabled="orderItems.length === 0 || isProcessing"
             class="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          결제
+          {{ isProcessing ? '처리중...' : '결제' }}
         </button>
       </div>
     </div>
@@ -83,8 +83,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useToast } from 'vue-toastification'
+import { posService } from '@/services/posService'
 
 const props = defineProps({
   orderItems: {
@@ -94,12 +95,17 @@ const props = defineProps({
   orderNumber: {
     type: String,
     required: true
+  },
+  isProcessing: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:orderItems', 'showPayment'])
+const emit = defineEmits(['update:orderItems', 'showPayment', 'update:isProcessing'])
 const toast = useToast()
 
+// 계산된 속성
 const subtotal = computed(() => {
   return props.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
@@ -107,6 +113,7 @@ const subtotal = computed(() => {
 const tax = computed(() => Math.floor(subtotal.value * 0.1))
 const total = computed(() => subtotal.value + tax.value)
 
+// 아이템 제거
 const removeItem = (index) => {
   const newItems = [...props.orderItems]
   const item = newItems[index]
@@ -115,12 +122,14 @@ const removeItem = (index) => {
   toast.info(`${item.name} 삭제됨`)
 }
 
+// 수량 증가
 const increaseQuantity = (index) => {
   const newItems = [...props.orderItems]
   newItems[index].quantity++
   emit('update:orderItems', newItems)
 }
 
+// 수량 감소
 const decreaseQuantity = (index) => {
   const newItems = [...props.orderItems]
   if (newItems[index].quantity > 1) {
@@ -131,12 +140,25 @@ const decreaseQuantity = (index) => {
   }
 }
 
+// 주문 취소
 const clearOrder = () => {
-  if (props.orderItems.length === 0) return
+  if (props.orderItems.length === 0 || props.isProcessing) return
 
   if (confirm('주문을 취소하시겠습니까?')) {
     emit('update:orderItems', [])
     toast.info('주문이 취소되었습니다')
   }
 }
+
+// 재고 확인 감시자
+watch(() => props.orderItems, async (newItems) => {
+  if (newItems.length > 0) {
+    try {
+      // 각 아이템에 대해 재고 확인 API를 호출할 수 있음
+      // 실제 구현에서는 상황에 따라 필요
+    } catch (error) {
+      console.error('재고 확인 오류:', error)
+    }
+  }
+}, { deep: true })
 </script>
