@@ -1,4 +1,4 @@
-package com.gijun.backend.domain.pos.Receipt;
+package com.gijun.backend.domain.pos.receipt;
 
 import com.gijun.backend.domain.BaseEntity;
 import com.gijun.backend.domain.user.User;

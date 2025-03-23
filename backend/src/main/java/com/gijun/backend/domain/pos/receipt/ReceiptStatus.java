@@ -1,4 +1,4 @@
-package com.gijun.backend.domain.pos.Receipt;
+package com.gijun.backend.domain.pos.receipt;
 
 public enum ReceiptStatus {
     COMPLETED,

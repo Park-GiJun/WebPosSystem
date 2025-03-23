@@ -1,6 +1,6 @@
 package com.gijun.backend.dto.receipt;
 
-import com.gijun.backend.domain.pos.Receipt.*;
+import com.gijun.backend.domain.pos.receipt.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;

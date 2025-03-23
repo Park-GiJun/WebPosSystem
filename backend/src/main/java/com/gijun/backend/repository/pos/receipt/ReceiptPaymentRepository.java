@@ -1,6 +1,6 @@
 package com.gijun.backend.repository.pos.receipt;
 
-import com.gijun.backend.domain.pos.Receipt.ReceiptPayment;
+import com.gijun.backend.domain.pos.receipt.ReceiptPayment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

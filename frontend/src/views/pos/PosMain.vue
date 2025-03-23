@@ -1,40 +1,27 @@
-<!-- PosMain.vue -->
+// PosMain.vue
 <template>
   <div class="h-full bg-gray-100">
-    <!-- Header -->
-    <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-      <div class="flex items-center gap-4">
-        <button @click="toggleMenu" class="text-gray-600">
-          <Menu class="w-6 h-6" />
-        </button>
-        <span class="font-bold">매장명: {{ storeName }}</span>
-      </div>
-      <div class="flex items-center gap-4">
-        <button @click="showReceiptHistoryModal = true" class="flex items-center gap-2 text-blue-600 hover:text-blue-800">
-          <Receipt class="w-5 h-5" />
-          영수증 조회
-        </button>
-        <span>{{ currentTime }}</span>
-        <span>{{ cashierName }}</span>
-      </div>
-    </header>
+    <PosHeader
+        :store-name="storeName"
+        :cashier-name="cashierName"
+        :current-time="currentTime"
+        @toggle-menu="toggleMenu"
+    />
 
-    <!-- Main Content -->
-    <main class="h-[calc(100vh-4rem)]">
-      <div class="flex h-full">
-        <ProductGrid
-            :categories="categories"
-            :products="products"
-            @add-item="addToOrder"
-        />
+    <div class="flex h-[calc(100vh-8rem)]">
+      <ProductGrid
+          :defaultCategories="categories"
+          :defaultProducts="products"
+          @add-item="addToOrder"
+      />
 
-        <OrderList
-            v-model:order-items="orderItems"
-            :order-number="orderNumber"
-            @show-payment="showPaymentModal = true"
-        />
-      </div>
-    </main>
+      <OrderList
+          v-model:orderItems="orderItems"
+          :orderNumber="orderNumber"
+          :isProcessing="isProcessing"
+          @showPayment="showPaymentModal = true"
+      />
+    </div>
 
     <!-- Menu Modal -->
     <MenuModal
@@ -60,28 +47,12 @@
     <SalesModal :is-open="showSalesModal" @close="showSalesModal = false" />
     <SettlementModal :is-open="showSettlementModal" @close="showSettlementModal = false" />
     <SettingsModal :is-open="showSettingsModal" @close="showSettingsModal = false" />
-
-    <!-- Receipt History Modal -->
-    <ReceiptHistoryModal
-        :is-open="showReceiptHistoryModal"
-        @close="showReceiptHistoryModal = false"
-        @select="showReceiptDetail"
-    />
-
-    <!-- Receipt Detail Modal -->
-    <ReceiptDetailModal
-        :is-open="showReceiptDetailModal"
-        :receipt-number="selectedReceiptNumber"
-        @close="showReceiptDetailModal = false"
-        @canceled="handleReceiptCanceled"
-    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
-import { Menu, Store, ShoppingCart, Receipt } from 'lucide-vue-next'
 import PosHeader from '@/components/pos/PosHeader.vue'
 import ProductGrid from '@/components/pos/ProductGrid.vue'
 import OrderList from '@/components/pos/OrderList.vue'
@@ -91,10 +62,12 @@ import ProductsModal from '@/components/modals/ProductsModal.vue'
 import SalesModal from '@/components/modals/PosSalesModal.vue'
 import SettlementModal from '@/components/modals/SettlementModal.vue'
 import SettingsModal from '@/components/modals/SettingsModal.vue'
-import ReceiptHistoryModal from '@/components/modals/ReceiptHistoryModal.vue'
-import ReceiptDetailModal from '@/components/modals/ReceiptDetailModal.vue'
+import { History, BarChart2, Calculator, Settings } from "lucide-vue-next"
 import { posService } from '@/services/posService'
+import axios from '@/plugins/axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const toast = useToast()
 
 // 모달 상태
@@ -103,20 +76,18 @@ const showSalesModal = ref(false)
 const showSettlementModal = ref(false)
 const showSettingsModal = ref(false)
 const showPaymentModal = ref(false)
-const showReceiptHistoryModal = ref(false)
-const showReceiptDetailModal = ref(false)
 const isProcessing = ref(false)
-const isMenuOpen = ref(false)
-const selectedReceiptNumber = ref('')
+const isLoading = ref(false)
 
 // Store Data
-const storeName = ref('카페')
-const cashierName = ref('홍길동')
-const currentTime = ref(new Date().toLocaleString())
+const storeName = ref('카페 길준')
+const cashierName = ref(localStorage.getItem('username') || '홍길동')
+const currentTime = ref(new Date().toLocaleString('ko-KR'))
+const userId = ref(localStorage.getItem('userId'))
 
 // Update time every second
-setInterval(() => {
-  currentTime.value = new Date().toLocaleString()
+const timeInterval = setInterval(() => {
+  currentTime.value = new Date().toLocaleString('ko-KR')
 }, 1000)
 
 // Menu Items
@@ -125,7 +96,7 @@ const menuItems = [
     id: 1,
     name: '상품 조회',
     description: '상품 및 재고 현황 조회',
-    icon: Store,
+    icon: History,
     action: 'products'
   },
   {
@@ -151,36 +122,20 @@ const menuItems = [
   }
 ]
 
-// Categories and Products
-const categories = ref([
-  { id: 1, name: '커피' },
-  { id: 2, name: '논커피' },
-  { id: 3, name: '티' },
-  { id: 4, name: '디저트' },
-  { id: 5, name: '베이커리' }
-])
-
-const products = ref([
-  { id: 1, categoryId: 1, name: '아메리카노', price: 4500 },
-  { id: 2, categoryId: 1, name: '카페라떼', price: 5000 },
-  { id: 3, categoryId: 1, name: '카푸치노', price: 5000 },
-  { id: 4, categoryId: 2, name: '초코라떼', price: 5500 },
-  { id: 5, categoryId: 2, name: '녹차라떼', price: 5500 },
-  { id: 6, categoryId: 3, name: '얼그레이', price: 4500 },
-  { id: 7, categoryId: 3, name: '캐모마일', price: 4500 },
-  { id: 8, categoryId: 4, name: '치즈케이크', price: 6500 },
-])
-
-const paymentMethods = ref([
-  { id: 1, name: 'CASH', label: '현금', icon: 'cash' },
-  { id: 2, name: 'CREDIT_CARD', label: '신용카드', icon: 'card' },
-  { id: 3, name: 'SAMSUNG_PAY', label: '삼성페이', icon: 'samsung' },
-  { id: 4, name: 'KAKAO_PAY', label: '카카오페이', icon: 'kakao' },
-])
-
 // State
+const categories = ref([])
+const products = ref([])
 const orderItems = ref([])
 const orderNumber = ref(generateOrderNumber())
+const isMenuOpen = ref(false)
+
+// 결제 수단 매핑 (백엔드 enum에 맞춤)
+const paymentMethods = ref([
+  { id: 'CASH', name: '현금', icon: 'cash' },
+  { id: 'CREDIT_CARD', name: '신용카드', icon: 'card' },
+  { id: 'SAMSUNG_PAY', name: '삼성페이', icon: 'samsung' },
+  { id: 'KAKAO_PAY', name: '카카오페이', icon: 'kakao' }
+])
 
 // Computed
 const subtotal = computed(() => {
@@ -223,54 +178,102 @@ const handleMenuClick = (action) => {
 }
 
 const addToOrder = (product) => {
+  // 재고 확인 (RECIPE_PRODUCT 타입은 재고 제한이 없다고 가정)
+  if (product.stock <= 0 && product.productType !== 'RECIPE_PRODUCT') {
+    toast.error(`${product.name}은(는) 품절입니다.`)
+    return
+  }
+
   const existingItem = orderItems.value.find(item => item.id === product.id)
   if (existingItem) {
     existingItem.quantity++
+    toast.info(`${product.name} 수량 증가`)
   } else {
     orderItems.value.push({ ...product, quantity: 1 })
+    toast.success(`${product.name} 추가됨`)
   }
 }
 
-// 결제 처리
+const fetchInitialData = async () => {
+  try {
+    isLoading.value = true
+
+    // 카테고리 불러오기
+    const categoriesResponse = await posService.getCategories()
+    categories.value = categoriesResponse.content || []
+
+    // 상품 불러오기
+    const productsResponse = await posService.getProducts({
+      status: 'ON_SALE',
+      sort: 'price,asc'
+    })
+    products.value = (productsResponse.content || []).filter(
+        product => product.productType !== 'RAW_MATERIAL'
+    )
+  } catch (error) {
+    console.error('데이터 로드 실패:', error)
+    toast.error('초기 데이터를 불러오는데 실패했습니다.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const processPayment = async (method) => {
   try {
     isProcessing.value = true
     showPaymentModal.value = false
 
-    // 결제 데이터 구성
-    const paymentData = {
-      paymentType: method.name,
-      paymentAmount: total.value,
-      approvalNumber: generateApprovalNumber(),
-      cardInfo: method.name === 'CREDIT_CARD' ? '1234-****-****-5678' : null
-    }
-
-    // 영수증 데이터 구성
-    const receiptData = {
+    // 결제 요청 데이터 구성
+    const receiptRequest = {
       items: orderItems.value.map(item => ({
         productId: item.id,
         quantity: item.quantity,
         unitPrice: item.price
       })),
-      payments: [paymentData]
+      payments: [
+        {
+          paymentType: method.id,
+          paymentAmount: total.value,
+          approvalNumber: generateApprovalNumber(),
+          cardInfo: method.id === 'CREDIT_CARD' ? '신용카드 정보' : null
+        }
+      ]
     }
 
-    // 영수증 생성 API 호출
-    const receipt = await posService.createReceipt(receiptData)
+    // 영수증 API 호출
+    const response = await axios.post('/receipts', { data: receiptRequest })
+    const receiptData = response.data.data
 
     // 영수증 출력
-    printReceipt(receipt)
+    printReceipt({
+      receiptNumber: receiptData.receiptNumber,
+      items: orderItems.value,
+      subtotal: subtotal.value,
+      tax: tax.value,
+      total: total.value,
+      paymentMethod: method.name,
+      cashier: cashierName.value
+    })
 
     // 주문 초기화
     orderItems.value = []
     orderNumber.value = generateOrderNumber()
 
     // 성공 메시지
-    toast.success(`결제가 완료되었습니다. 영수증 번호: ${receipt.receiptNumber}`)
+    toast.success('결제가 완료되었습니다')
 
   } catch (error) {
     console.error('Payment failed:', error)
-    toast.error('결제 처리 중 오류가 발생했습니다')
+
+    if (error.response && error.response.data) {
+      toast.error(`결제 실패: ${error.response.data.message || '결제 처리 중 오류가 발생했습니다'}`)
+    } else {
+      toast.error('결제 처리 중 오류가 발생했습니다')
+    }
+
+    // 개발 목적으로 에러 발생 시에도 주문 초기화 (실제 환경에서는 제거)
+    orderItems.value = []
+    orderNumber.value = generateOrderNumber()
   } finally {
     isProcessing.value = false
   }
@@ -278,56 +281,38 @@ const processPayment = async (method) => {
 
 // 승인번호 생성 함수
 const generateApprovalNumber = () => {
-  const date = new Date()
-  const year = date.getFullYear().toString().slice(-2)
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const dateStr = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
-  return `${year}${month}${day}${random}`
+  return `APV${dateStr}${random}`
 }
 
-// 영수증 출력 함수
-const printReceipt = (receipt) => {
+const printReceipt = (data) => {
+  // 영수증 출력 시뮬레이션
   console.log('=== 영수증 ===')
-  console.log(`영수증 번호: ${receipt.receiptNumber}`)
-  console.log(`일시: ${new Date(receipt.saleDate).toLocaleString()}`)
+  console.log(`영수증번호: ${data.receiptNumber}`)
+  console.log(`일시: ${new Date().toLocaleString('ko-KR')}`)
   console.log(`\n상품:`)
-  receipt.items.forEach(item => {
-    console.log(`${item.product.name} x ${item.quantity} = ₩${item.lineAmount.toLocaleString()}`)
+  data.items.forEach(item => {
+    console.log(`${item.name} x ${item.quantity} = ₩${(item.price * item.quantity).toLocaleString()}`)
   })
-  console.log(`\n소계: ₩${receipt.totalAmount.toLocaleString()}`)
-  console.log(`부가세: ₩${receipt.taxAmount.toLocaleString()}`)
-
-  if (receipt.discountAmount && receipt.discountAmount > 0) {
-    console.log(`할인: ₩${receipt.discountAmount.toLocaleString()}`)
-  }
-
-  console.log(`합계: ₩${receipt.totalAmount.toLocaleString()}`)
-
-  receipt.payments.forEach(payment => {
-    console.log(`\n결제방법: ${payment.paymentType}`)
-    console.log(`결제금액: ₩${payment.paymentAmount.toLocaleString()}`)
-    if (payment.approvalNumber) {
-      console.log(`승인번호: ${payment.approvalNumber}`)
-    }
-    if (payment.cardInfo) {
-      console.log(`카드정보: ${payment.cardInfo}`)
-    }
-  })
-
-  console.log(`\n담당: ${receipt.user.username}`)
+  console.log(`\n소계: ₩${data.subtotal.toLocaleString()}`)
+  console.log(`부가세: ₩${data.tax.toLocaleString()}`)
+  console.log(`합계: ₩${data.total.toLocaleString()}`)
+  console.log(`\n결제방법: ${data.paymentMethod}`)
+  console.log(`담당: ${data.cashier}`)
   console.log('============')
+
+  // 실제로는 영수증 출력 API 호출
+  // 예: posService.printReceipt(data.receiptNumber)
 }
 
-// 영수증 상세 보기
-const showReceiptDetail = (receiptNumber) => {
-  selectedReceiptNumber.value = receiptNumber
-  showReceiptDetailModal.value = true
-  showReceiptHistoryModal.value = false
-}
+// 초기 데이터 로드
+onMounted(() => {
+  fetchInitialData()
 
-// 영수증 취소 처리
-const handleReceiptCanceled = () => {
-  toast.success('영수증이 성공적으로 취소되었습니다.')
-}
+  // 컴포넌트 언마운트 시 타이머 정리
+  return () => {
+    clearInterval(timeInterval)
+  }
+})
 </script>

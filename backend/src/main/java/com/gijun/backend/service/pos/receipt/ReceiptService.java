@@ -1,9 +1,9 @@
 package com.gijun.backend.service.pos.receipt;
 
-import com.gijun.backend.domain.pos.Receipt.Receipt;
-import com.gijun.backend.domain.pos.Receipt.ReceiptItem;
-import com.gijun.backend.domain.pos.Receipt.ReceiptPayment;
-import com.gijun.backend.domain.pos.Receipt.ReceiptStatus;
+import com.gijun.backend.domain.pos.receipt.Receipt;
+import com.gijun.backend.domain.pos.receipt.ReceiptItem;
+import com.gijun.backend.domain.pos.receipt.ReceiptPayment;
+import com.gijun.backend.domain.pos.receipt.ReceiptStatus;
 import com.gijun.backend.domain.sis.product.Product;
 import com.gijun.backend.domain.user.User;
 import com.gijun.backend.dto.receipt.ReceiptDTO;

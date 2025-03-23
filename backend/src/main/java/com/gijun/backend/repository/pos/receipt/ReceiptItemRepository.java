@@ -1,6 +1,6 @@
 package com.gijun.backend.repository.pos.receipt;
 
-import com.gijun.backend.domain.pos.Receipt.ReceiptItem;
+import com.gijun.backend.domain.pos.receipt.ReceiptItem;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
