@@ -96,6 +96,47 @@ class PosService {
             throw error;
         }
     }
+
+    // 영수증 관련 메서드 추가
+    async createReceipt(receiptData) {
+        try {
+            const response = await axios.post('/receipts', { data: receiptData });
+            return response.data.data;
+        } catch (error) {
+            console.error('Failed to create receipt:', error);
+            throw error;
+        }
+    }
+
+    async getReceipt(receiptNumber) {
+        try {
+            const response = await axios.get(`/receipts/${receiptNumber}`);
+            return response.data.data;
+        } catch (error) {
+            console.error(`Failed to fetch receipt ${receiptNumber}:`, error);
+            throw error;
+        }
+    }
+
+    async cancelReceipt(receiptNumber) {
+        try {
+            const response = await axios.post(`/receipts/${receiptNumber}/cancel`);
+            return response.data.data;
+        } catch (error) {
+            console.error(`Failed to cancel receipt ${receiptNumber}:`, error);
+            throw error;
+        }
+    }
+
+    async getUserReceipts(params = {}) {
+        try {
+            const response = await axios.get('/receipts/user', { params });
+            return response.data.data;
+        } catch (error) {
+            console.error('Failed to fetch user receipts:', error);
+            throw error;
+        }
+    }
 }
 
 export const posService = new PosService();
